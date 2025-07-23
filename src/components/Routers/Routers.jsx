@@ -14,6 +14,9 @@ import Testreports from '../Dashboards/Employee/Testreports'
 import Login from '../Dashboards/Login/Login'
 import Admindashboard from '../Dashboards/Admin/Admindashboard'
 import Employeedashboard from '../Dashboards/Employee/Employeedashboard'
+import ExchangeConfirm from '../Dashboards/Employee/ExchangeConfirm';
+import PurchaseConfirm from '../Dashboards/Employee/PurchaseConfirm';
+import SalesConfirm from '../Dashboards/Employee/SaleConfirm';
 function Routers() {
   return (
     <Routes>
@@ -33,7 +36,10 @@ function Routers() {
       <Route path='/employee/sales' element={<Sales/>}/>
       <Route path='/employee/tokens' element={<Emptokens/>}/>
       <Route path='/employee/exchanges' element={<Exchanges/>}/>
+      <Route path='/employee/exchanges/confirm' element={<ExchangeConfirm/>}/>
       <Route path='/employee/purchases' element={<Purchases/>}/>
+      <Route path='/employee/purchases/confirm' element={<PurchaseConfirm/>}/>
+      <Route path='/employee/sales/confirm' element={<SalesConfirm/>}/>
       <Route path='/employee/order-management' element={<Ordermanage/>}/>
       <Route path='/employee/test-reports' element={<Testreports/>}/>
     

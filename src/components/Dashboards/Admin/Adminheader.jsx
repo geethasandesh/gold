@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth, db } from '../../../firebase';
 import { signOut } from 'firebase/auth';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, onSnapshot, updateDoc, doc } from 'firebase/firestore';
  
 function Adminheader() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [userName, setUserName] = useState('');
+  const [showNotif, setShowNotif] = useState(false);
+  const [notifications, setNotifications] = useState([]);
   const navigate = useNavigate();
  
   useEffect(() => {
@@ -23,6 +25,23 @@ function Adminheader() {
     };
     fetchUserName();
   }, []);
+ 
+  // Listen for admin notifications
+  useEffect(() => {
+    const notifQ = query(collection(db, 'admin_notifications'), where('seen', '==', false));
+    const unsub = onSnapshot(notifQ, (snapshot) => {
+      setNotifications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    return () => unsub();
+  }, []);
+ 
+  const handleNotifClick = async (notif) => {
+    setShowNotif(false);
+    // Mark as seen
+    await updateDoc(doc(db, 'admin_notifications', notif.id), { seen: true });
+    // Navigate to the relevant reserves page
+    navigate(notif.link);
+  };
  
   const handleLogout = async () => {
     try {
@@ -50,6 +69,33 @@ function Adminheader() {
 
 
           </nav>
+          {/* Notification Bell */}
+          <div className="relative">
+            <button
+              onClick={() => setShowNotif((v) => !v)}
+              className="relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-yellow-600 focus:outline-none"
+              title="Notifications"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+              {notifications.length > 0 && (
+                <span className="absolute top-1 right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
+              )}
+            </button>
+            {showNotif && notifications.length > 0 && (
+              <div className="absolute right-0 mt-2 w-80 bg-white text-black rounded-lg shadow-xl z-50">
+                <div className="p-4 border-b font-bold">Notifications</div>
+                <ul>
+                  {notifications.map((notif) => (
+                    <li key={notif.id} className="px-4 py-3 border-b hover:bg-yellow-100 cursor-pointer" onClick={() => handleNotifClick(notif)}>
+                      {notif.message}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
           <div className="relative">
             <button
               onClick={() => setShowLogoutModal(true)}
