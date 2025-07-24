@@ -108,7 +108,7 @@ function Adminheader() {
                 </div>
                 <ul className="max-h-64 overflow-y-auto">
                   {notifications.length === 0 ? (
-                    <li className="px-4 py-3 text-gray-500">No new notificationss</li>
+                    <li className="px-4 py-3 text-gray-500">No new notifications</li>
                   ) : notifications.map((notif) => (
                     <li key={notif.id} className="px-4 py-3 border-b hover:bg-yellow-100/80 cursor-pointer transition-colors" onClick={() => handleNotifClick(notif)}>
                       {notif.message}
