@@ -101,7 +101,7 @@ function Admintokens() {
   return (
     <>
       <Adminheader />
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-yellow-50 to-yellow-200 py-8 px-2">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-yellow-50 to-yellow-60 py-8 px-2">
         <div className="w-full max-w-4xl flex flex-col md:flex-row gap-10 items-start">
           {/* Form Card */}
           <form onSubmit={handleSubmit} className="flex-1 bg-white/90 rounded-3xl shadow-2xl p-10 space-y-8 border border-yellow-100">

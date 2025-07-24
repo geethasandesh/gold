@@ -90,7 +90,7 @@ function Admindashboard() {
     try {
       await signOut(auth);
       navigate('/');
-    } catch (error) {
+    } catch {
       showNotification('Error logging out', 'error');
     }
   };
@@ -102,101 +102,98 @@ function Admindashboard() {
 
   return (
     <div className="min-h-screen bg-[#fffcf5] py-6 px-4 relative">
-      {/* Top left */}
-      <div className="absolute top-4 left-4 md:top-6 md:left-6">
-        <h1 className="text-lg md:text-2xl font-semibold font-sans text-yellow-700">S M D B</h1>
-        <div className="h-1 w-12 md:w-21 bg-yellow-500 mt-1 rounded-full"></div>
-      </div>
+      <div className={showAddEmployeeModal ? 'blur-md transition duration-300' : ''}>
+        {/* Top left */}
+        <div className="absolute top-4 left-4 md:top-6 md:left-6">
+          <h1 className="text-lg md:text-2xl font-semibold font-sans text-yellow-700">S M D B</h1>
+          <div className="h-1 w-12 md:w-21 bg-yellow-500 mt-1 rounded-full"></div>
+        </div>
 
-      {/* Top right */}
-      <div className="absolute top-4 right-4 md:top-6 md:right-6">
-        <button
-          onClick={handleLogout}
-          className="bg-yellow-500 text-white px-3 py-1 md:px-4 md:py-2 rounded-lg hover:bg-yellow-600 font-semibold text-sm md:text-base"
-        >
-          Logout
-        </button>
-      </div>
-
-      <div className="text-center mb-8 md:mb-12 px-2">
-        <h1 className="text-2xl md:text-4xl font-semibold font-sans text-gray-900">
-          Gold Shop <span className="text-yellow-500">Management Center</span>
-        </h1>
-        <p className="mt-2 text-gray-500 text-xl  font-sans md:text-lg max-w-xl mx-auto">
-          Manage your precious jewelry stores with elegance and precision
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 md:gap-10 max-w-6xl mx-auto w-full px-2">
-        {stores.map(store => (
-          <div
-            key={store.id}
-            onClick={() => {
-              selectStore(store);
-              navigate('/admin/tokens');
-            }}
-            className="rounded-2xl p-4 md:p-6 shadow-lg hover:shadow-2xl transition cursor-pointer relative border-2 border-yellow-400 bg-white/30 backdrop-blur-md h-[440px] flex flex-col justify-between"
+        {/* Top right */}
+        <div className="absolute top-4 right-4 md:top-6 md:right-6">
+          <button
+            onClick={handleLogout}
+            className="bg-yellow-500 text-white px-3 py-1 md:px-4 md:py-2 rounded-lg hover:bg-yellow-600 font-semibold text-sm md:text-base"
           >
-            <div className="relative">
-              <img
-                src={store.image}
-                alt={store.name}
-                className="absolute top-0 right-0 w-12 h-12 md:w-16 md:h-16 object-cover rounded-bl-xl shadow-md"
-              />
-              <div className="mb-3 md:mb-4">
-                <h2 className="text-lg md:text-xl font-bold text-yellow-500">{store.name}</h2>
-                <p className="text-gray-500 text-xs md:text-sm">{store.location}</p>
-                <p className="text-gray-400 text-xs md:text-sm">{store.type}</p>
-              </div>
-              <div className="mb-3 md:mb-4 flex-1 flex flex-col">
-                <h3 className="text-xs md:text-sm font-semibold text-gray-600 mb-1 md:mb-2">Team Members</h3>
-                {employees.filter(emp => emp.storeId === store.id).length === 0 ? (
-                  <p className="text-gray-400 text-xs md:text-sm">No employees added yet.</p>
-                ) : (
-                  <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1">
-                    {employees.filter(emp => emp.storeId === store.id).map((emp, idx) => (
-                      <div
-                        key={emp.email + idx}
-                        className="bg-gray-50 px-3 py-1.5 md:px-4 md:py-2 rounded-lg flex items-center justify-between"
-                      >
-                        <div className="flex items-center space-x-2 md:space-x-3">
-                          <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-yellow-400 text-white font-semibold flex items-center justify-center uppercase text-xs md:text-sm">
-                            {emp.name?.[0] || 'U'}
-                          </div>
-                          <div>
-                            <p className="text-gray-800 font-medium text-xs md:text-sm">{emp.name}</p>
-                            <p className="text-gray-500 text-[10px] md:text-xs">{emp.role}</p>
-                          </div>
-                        </div>
-                        <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedStore(store);
-                setEmployeeData(prev => ({ ...prev, storeName: store.name }));
-                setShowAddEmployeeModal(true);
-              }}
-              className="w-full bg-yellow-400 hover:bg-yellow-500 text-white font-semibold py-1.5 md:py-2 rounded-lg shadow mt-3 md:mt-4 text-sm md:text-base"
-            >
-              Add Team Member
-            </button>
-          </div>
-        ))}
-      </div>
+            Logout
+          </button>
+        </div>
 
+        <div className="text-center mb-8 md:mb-12 px-2">
+          <h1 className="text-2xl md:text-4xl font-semibold font-sans text-gray-900">
+            Gold Shop <span className="text-yellow-500">Management Center</span>
+          </h1>
+          <p className="mt-2 text-gray-500 text-xl  font-sans md:text-lg max-w-xl mx-auto">
+            Manage your precious jewelry stores with elegance and precision
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 md:gap-10 max-w-6xl mx-auto w-full px-2">
+          {stores.map(store => (
+            <div
+              key={store.id}
+              onClick={() => {
+                selectStore(store);
+                navigate('/admin/tokens');
+              }}
+              className="rounded-2xl p-4 md:p-6 shadow-lg hover:shadow-2xl transition cursor-pointer relative border-2 border-yellow-400 bg-white/30 backdrop-blur-md h-[440px] flex flex-col justify-between"
+            >
+              <div className="relative">
+                <img
+                  src={store.image}
+                  alt={store.name}
+                  className="absolute top-0 right-0 w-12 h-12 md:w-16 md:h-16 object-cover rounded-bl-xl shadow-md"
+                />
+                <div className="mb-3 md:mb-4">
+                  <h2 className="text-lg md:text-xl font-bold text-yellow-500">{store.name}</h2>
+                  <p className="text-gray-500 text-xs md:text-sm">{store.location}</p>
+                  <p className="text-gray-400 text-xs md:text-sm">{store.type}</p>
+                </div>
+                <div className="mb-3 md:mb-4 flex-1 flex flex-col">
+                  <h3 className="text-xs md:text-sm font-semibold text-gray-600 mb-1 md:mb-2">Team Members</h3>
+                  {employees.filter(emp => emp.storeId === store.id).length === 0 ? (
+                    <p className="text-gray-400 text-xs md:text-sm">No employees added yet.</p>
+                  ) : (
+                    <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1">
+                      {employees.filter(emp => emp.storeId === store.id).map((emp, idx) => (
+                        <div
+                          key={emp.email + idx}
+                          className="bg-gray-50 px-3 py-1.5 md:px-4 md:py-2 rounded-lg flex items-center justify-between"
+                        >
+                          <div className="flex items-center space-x-2 md:space-x-3">
+                            <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-yellow-400 text-white font-semibold flex items-center justify-center uppercase text-xs md:text-sm">
+                              {emp.name?.[0] || 'U'}
+                            </div>
+                            <div>
+                              <p className="text-gray-800 font-medium text-xs md:text-sm">{emp.name}</p>
+                              <p className="text-gray-500 text-[10px] md:text-xs">{emp.role}</p>
+                            </div>
+                          </div>
+                          <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedStore(store);
+                  setEmployeeData(prev => ({ ...prev, storeName: store.name }));
+                  setShowAddEmployeeModal(true);
+                }}
+                className="w-full bg-yellow-400 hover:bg-yellow-500 text-white font-semibold py-1.5 md:py-2 rounded-lg shadow mt-3 md:mt-4 text-sm md:text-base"
+              >
+                Add Team Member
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
       {/* Add Employee Modal */}
       {showAddEmployeeModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-          <div
-            className="absolute inset-0 bg-black bg-opacity-40"
-            onClick={() => setShowAddEmployeeModal(false)}
-          />
           <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md p-4 md:p-6 z-10">
             <h3 className="text-lg md:text-xl font-semibold mb-3 md:mb-4">
               Add Employee to {selectedStore?.name}
@@ -245,7 +242,7 @@ function Admindashboard() {
                 onChange={e => setEmployeeData({ ...employeeData, role: e.target.value })}
               >
                 <option value="Employee">Employee</option>
-                <option value="Admin">Admin</option>
+               
               </select>
               <div className="flex justify-end space-x-2">
                 <button
@@ -267,16 +264,16 @@ function Admindashboard() {
         </div>
       )}
 
-      {/* Notification Toast */}
-      {notification.show && (
-        <div
-          className={`fixed top-6 left-1/2 transform -translate-x-1/2 p-3 md:p-4 rounded-xl text-white z-[9999] ${
-            notification.type === 'success' ? 'bg-green-600' : 'bg-red-600'
-          } text-sm md:text-base`}
-        >
-          {notification.message}
-        </div>
-      )}
+        {/* Notification Toast */}
+        {notification.show && (
+          <div
+            className={`fixed top-6 left-1/2 transform -translate-x-1/2 p-3 md:p-4 rounded-xl text-white z-[9999] ${
+              notification.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+            } text-sm md:text-base`}
+          >
+            {notification.message}
+          </div>
+        )}
     </div>
   );
 }
