@@ -3,31 +3,31 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { db, auth } from '../../../firebase';
 import { collection, addDoc, getDocs, query, where, serverTimestamp, updateDoc, doc } from 'firebase/firestore';
 import Employeeheader from './Employeeheader';
-
+ 
 function SaleConfirm() {
   const location = useLocation();
   const navigate = useNavigate();
   const data = location.state || {};
-
+ 
   const [loading, setLoading] = useState(false);
   const [employee, setEmployee] = useState('');
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [insufficient, setInsufficient] = useState(false);
-
+ 
   // State for both local and bank gold/silver
   const [localAvailable, setLocalAvailable] = useState(0);
   const [localRemaining, setLocalRemaining] = useState(0);
   const [bankAvailable, setBankAvailable] = useState(0);
   const [bankRemaining, setBankRemaining] = useState(0);
-
+ 
   const localType = data.saleType === 'SILVER' ? 'LOCAL SILVER' : 'LOCAL GOLD';
   const bankType = data.saleType === 'SILVER' ? 'KAMAL SILVER' : 'BANK GOLD';
   const [selectedSource, setSelectedSource] = useState(data.source || localType);
-
+ 
   // Labels
   const localLabel = data.saleType === 'SILVER' ? 'Pay from local silver' : 'Pay from local gold';
   const bankLabel = data.saleType === 'SILVER' ? 'Pay from kamal silver' : 'Pay from bank gold';
-
+ 
   // Get current employee
   useEffect(() => {
     const fetchUser = async () => {
@@ -43,7 +43,7 @@ function SaleConfirm() {
     };
     fetchUser();
   }, []);
-
+ 
   // Fetch available stock
   useEffect(() => {
     const fetchAvailable = async () => {
@@ -61,7 +61,7 @@ function SaleConfirm() {
       const weight = parseFloat(data.weight) || 0;
       const rem = latestTotal - weight;
       setInsufficient(rem < 0);
-
+ 
       // Notify admin if insufficient
       if (rem < 0) {
         const notifCol = collection(db, 'admin_notifications');
@@ -80,7 +80,7 @@ function SaleConfirm() {
     };
     fetchAvailable();
   }, [data.saleType, selectedSource, data.weight]);
-
+ 
   // Fetch available cash for selected mode
   useEffect(() => {
     const fetchCash = async () => {
@@ -100,7 +100,7 @@ function SaleConfirm() {
     };
     fetchCash();
   }, [data.mode, data.amount]);
-
+ 
   // Fetch both local and bank available/remaining
   useEffect(() => {
     const fetchBoth = async () => {
@@ -133,7 +133,7 @@ function SaleConfirm() {
     };
     fetchBoth();
   }, [data.saleType, data.weight]);
-
+ 
   // Print functionality
   const handleApprove = async () => {
     if (insufficient) return;
@@ -147,7 +147,7 @@ function SaleConfirm() {
       let current = 0;
       snapshot.forEach(docSnap => {
         const d = docSnap.data();
-        if (typeof d.available === 'number') {
+        if (typeof d.available === 'number' && d.available > current) {
           current = d.available;
           docId = docSnap.id;
         }
@@ -220,12 +220,12 @@ function SaleConfirm() {
     }
     setLoading(false);
   };
-
+ 
   const handleDeny = () => {
     if (insufficient) return;
     navigate('/employee/sales');
   };
-
+ 
   return (
     <>
       <Employeeheader />
@@ -314,5 +314,6 @@ function SaleConfirm() {
     </>
   );
 }
-
-export default SaleConfirm; 
+ 
+export default SaleConfirm;
+ 

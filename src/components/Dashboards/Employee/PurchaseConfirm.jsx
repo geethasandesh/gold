@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { db, auth } from '../../../firebase';
 import { collection, addDoc, serverTimestamp, getDocs, query, where, updateDoc, doc } from 'firebase/firestore';
 import Employeeheader from './Employeeheader';
-
+ 
 function PurchaseConfirm() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -17,7 +17,7 @@ function PurchaseConfirm() {
   // Add for online
   const [availableOnline, setAvailableOnline] = useState(0);
   const [remainingOnline, setRemainingOnline] = useState(0);
-
+ 
   // Fetch employee name
   useState(() => {
     const fetchUser = async () => {
@@ -33,7 +33,7 @@ function PurchaseConfirm() {
     };
     fetchUser();
   }, []);
-
+ 
   // Fetch available cash for both ledger and online
   useEffect(() => {
     const fetchBoth = async () => {
@@ -73,7 +73,7 @@ function PurchaseConfirm() {
     };
     fetchBoth();
   }, [data.paymentType, data.cashMode, data.amount]);
-
+ 
   const handleApprove = async () => {
     if (insufficient) return;
     setLoading(true);
@@ -90,7 +90,7 @@ function PurchaseConfirm() {
         let current = 0;
         snapshot.forEach(docSnap => {
           const d = docSnap.data();
-          if (typeof d.available === 'number') {
+          if (typeof d.available === 'number' && d.available > current) {
             current = d.available;
             docId = docSnap.id;
           }
@@ -117,11 +117,11 @@ function PurchaseConfirm() {
     }
     setLoading(false);
   };
-
+ 
   const handleDeny = () => {
     navigate('/employee/purchases');
   };
-
+ 
   // Print functionality
   const handlePrint = () => {
     const printContents = document.getElementById('purchase-receipt').innerHTML;
@@ -134,7 +134,7 @@ function PurchaseConfirm() {
     win.document.close();
     win.print();
   };
-
+ 
   // Calculation part rendering
   const renderCalc = () => {
     if (data.subType === 'KACHA_GOLD' || data.subType === 'KACHA_SILVER') {
@@ -161,7 +161,7 @@ function PurchaseConfirm() {
     }
     return null;
   };
-
+ 
   return (
     <>
       <Employeeheader />
@@ -233,5 +233,6 @@ function PurchaseConfirm() {
     </>
   );
 }
-
-export default PurchaseConfirm; 
+ 
+export default PurchaseConfirm;
+ 

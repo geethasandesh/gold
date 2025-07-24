@@ -3,24 +3,24 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { db, auth } from '../../../firebase';
 import { collection, addDoc, getDocs, query, where, serverTimestamp, updateDoc, doc } from 'firebase/firestore';
 import Employeeheader from './Employeeheader';
-
+ 
 function ExchangeConfirm() {
   const location = useLocation();
   const navigate = useNavigate();
   const data = location.state || {};
-
+ 
   const [available, setAvailable] = useState(0);
   const [remaining, setRemaining] = useState(0);
   const [loading, setLoading] = useState(false);
   const [employee, setEmployee] = useState('');
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [insufficient, setInsufficient] = useState(false);
-
+ 
   const localType = data.type === 'SILVER' ? 'LOCAL SILVER' : 'LOCAL GOLD';
   const bankType = data.type === 'SILVER' ? 'KAMAL SILVER' : 'BANK GOLD';
-
+ 
   const [selectedSource, setSelectedSource] = useState(data.source || localType);
-
+ 
   // Labels
   const localLabel = data.type === 'SILVER' ? 'Pay from local silver' : 'Pay from local gold';
   const bankLabel = data.type === 'SILVER' ? 'Pay from kamal silver' : 'Pay from bank gold';
@@ -28,7 +28,7 @@ function ExchangeConfirm() {
   const availableLabel = selectedSource === localType
     ? localLabel.replace('Pay from ', 'Available ')
     : bankLabel.replace('Pay from ', 'Available ');
-
+ 
   // Get current employee
   useEffect(() => {
     const fetchUser = async () => {
@@ -44,7 +44,7 @@ function ExchangeConfirm() {
     };
     fetchUser();
   }, []);
-
+ 
   // Fetch available stock
   useEffect(() => {
     const fetchAvailable = async () => {
@@ -64,7 +64,7 @@ function ExchangeConfirm() {
       const rem = latestTotal - fine;
       setRemaining(rem);
       setInsufficient(rem < 0);
-
+ 
       // Notify admin if insufficient
       if (rem < 0) {
         const notifCol = collection(db, 'admin_notifications');
@@ -83,35 +83,37 @@ function ExchangeConfirm() {
     };
     fetchAvailable();
   }, [data.type, selectedSource, data.fine]);
-
+ 
   const handleApprove = async () => {
     if (insufficient) return;
     setLoading(true);
     try {
       const reservesCol = data.type === 'GOLD' ? 'goldreserves' : 'silverreserves';
       const typeVal = selectedSource === localType ? localType : bankType;
-
+ 
       const q = query(collection(db, reservesCol), where('type', '==', typeVal));
       const snapshot = await getDocs(q);
-
+ 
       let latestTotal = 0;
+      let latestDocId = null;
       snapshot.forEach(docSnap => {
         const d = docSnap.data();
         if (typeof d.totalingms === 'number' && d.totalingms > latestTotal) {
           latestTotal = d.totalingms;
+          latestDocId = docSnap.id;
         }
       });
-
+ 
       const fine = parseFloat(data.fine) || 0;
       const newTotal = latestTotal - fine;
-
+ 
       if (latestDocId) {
         await updateDoc(doc(db, reservesCol, latestDocId), {
           availableingms: newTotal,
           totalingms: newTotal,
         });
       }
-
+ 
       // Low stock notification logic
       if (newTotal < 10) {
         const notifCol = collection(db, 'admin_notifications');
@@ -127,7 +129,7 @@ function ExchangeConfirm() {
           });
         }
       }
-
+ 
       await addDoc(collection(db, 'exchanges'), {
         ...data,
         source: selectedSource,
@@ -135,7 +137,7 @@ function ExchangeConfirm() {
         date: new Date().toLocaleDateString('en-GB'),
         createdAt: serverTimestamp(),
       });
-
+ 
       setToast({ show: true, message: 'Transaction approved!', type: 'success' });
       setTimeout(() => navigate('/employee/exchanges'), 1500);
     } catch (err) {
@@ -144,12 +146,12 @@ function ExchangeConfirm() {
     }
     setLoading(false);
   };
-
+ 
   const handleDeny = () => {
     if (insufficient) return;
     navigate('/employee/exchanges');
   };
-
+ 
   return (
     <>
       <Employeeheader />
@@ -167,7 +169,7 @@ function ExchangeConfirm() {
             <div className="mb-2"><b>Source</b>: {data.source}</div>
             <div className="mb-2"><b>Employee</b>: {employee}</div>
           </div>
-
+ 
           <div className="flex gap-4 mb-4">
             <button
               type="button"
@@ -192,7 +194,7 @@ function ExchangeConfirm() {
               {bankLabel}
             </button>
           </div>
-
+ 
           <div className="mb-4">
             <div className="mb-2"><b>{availableLabel}</b>: <input value={available} readOnly className="border px-2 py-1 rounded w-32 text-center" /></div>
             <div className="mb-2"><b>Currently paying {metalLabel}</b>: <input value={data.fine} readOnly className="border px-2 py-1 rounded w-32 text-center" /></div>
@@ -201,7 +203,7 @@ function ExchangeConfirm() {
               <div className="text-red-600 font-semibold mt-2">Insufficient balance in {availableLabel.toLowerCase()}!</div>
             )}
           </div>
-
+ 
           <div className="flex gap-4 justify-center mt-6">
             <button
               onClick={handleApprove}
@@ -223,7 +225,7 @@ function ExchangeConfirm() {
             </button>
           </div>
         </div>
-
+ 
         {toast.show && (
           <div className={`fixed top-6 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-xl shadow-lg z-[9999] flex items-center gap-2 text-white ${
             toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
@@ -235,5 +237,7 @@ function ExchangeConfirm() {
     </>
   );
 }
-
+ 
 export default ExchangeConfirm;
+ 
+ 
