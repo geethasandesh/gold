@@ -167,7 +167,7 @@ function Reports() {
   return (
     <>
       <Adminheader />
-      <div className="min-h-screen flex flex-col items-center bg-gradient-to-br from-yellow-50 to-yellow-200 py-8 px-2">
+      <div className="min-h-screen flex flex-col items-center bg-[#fffcf5] py-8 px-2">
         <div className="w-full max-w-6xl bg-white/90 rounded-2xl shadow-xl p-8 border border-yellow-100 mt-8">
           <div className="flex gap-4 mb-6">
             <button onClick={() => setTab('EXCHANGES')} className={`px-6 py-2 rounded-lg font-bold ${tab === 'EXCHANGES' ? 'bg-yellow-400 text-black' : 'bg-gray-200 text-gray-700'}`}>Exchanges</button>

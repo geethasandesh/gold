@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { FaUniversity, FaCoins, FaPlus, FaInfoCircle } from 'react-icons/fa';
 import { MdCelebration, MdError } from 'react-icons/md';
  
-const RESERVE_TARGET = 1000;
+const RESERVE_TARGET = 5000;
  
 function Goldreservers() {
   const [reserveType, setReserveType] = useState('LOCAL GOLD');
@@ -151,7 +151,7 @@ function Goldreservers() {
   return (
     <>
       <Adminheader />
-      <div className="min-h-screen flex flex-col items-center justify-center bg-white py-8 px-2">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#fffcf5] py-8 px-2">
         <div className="w-full max-w-2xl flex flex-col items-center">
           <div className="w-full max-w-xl bg-white rounded-3xl shadow-2xl p-10 border border-yellow-100 mt-4">
             <div className="flex items-center justify-between mb-8">

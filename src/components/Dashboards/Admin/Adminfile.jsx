@@ -38,7 +38,7 @@ function Adminfile() {
   return (
     <>
       <Adminheader />
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-yellow-50 to-yellow-200 py-8 px-2">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#fffcf5] py-8 px-2">
         <div className="w-full max-w-lg bg-white/90 rounded-2xl shadow-xl p-8 border border-yellow-100">
           <h2 className="text-xl font-bold text-yellow-700 mb-6 text-center">Cash Management</h2>
           <div className="mb-6">

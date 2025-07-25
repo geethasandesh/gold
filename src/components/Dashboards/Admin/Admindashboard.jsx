@@ -20,6 +20,7 @@ function Admindashboard() {
     storeName: ''
   });
   const [employees, setEmployees] = useState([]);
+  const [loading, setLoading] = useState(false); // For Add Employee loading state
   const { selectStore } = useStore();
   const navigate = useNavigate();
 
@@ -38,11 +39,18 @@ function Admindashboard() {
 
   const handleAddEmployee = async (e) => {
     e.preventDefault();
+    // Mobile number validation: must be exactly 10 digits
+    if (employeeData.mobile.length !== 10) {
+      showNotification('Mobile number must be exactly 10 digits', 'error');
+      return;
+    }
+    setLoading(true);
     try {
       const emailQuery = query(collection(db, 'users'), where('email', '==', employeeData.email));
       const emailSnapshot = await getDocs(emailQuery);
       if (!emailSnapshot.empty) {
         showNotification('Email already exists', 'error');
+        setLoading(false);
         return;
       }
 
@@ -50,6 +58,7 @@ function Admindashboard() {
       const mobileSnapshot = await getDocs(mobileQuery);
       if (!mobileSnapshot.empty) {
         showNotification('Mobile number already exists', 'error');
+        setLoading(false);
         return;
       }
 
@@ -83,6 +92,8 @@ function Admindashboard() {
     } catch (error) {
       console.error('Error adding employee:', error);
       showNotification(error.message, 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -193,75 +204,106 @@ function Admindashboard() {
       </div>
       {/* Add Employee Modal */}
       {showAddEmployeeModal && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-          <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md p-4 md:p-6 z-10">
-            <h3 className="text-lg md:text-xl font-semibold mb-3 md:mb-4">
-              Add Employee to {selectedStore?.name}
-            </h3>
-            <form onSubmit={handleAddEmployee} className="space-y-3 md:space-y-4">
-              <input
-                type="text"
-                placeholder="Name"
-                required
-                className="w-full border px-3 py-2 rounded-lg text-sm md:text-base"
-                value={employeeData.name}
-                onChange={e => setEmployeeData({ ...employeeData, name: e.target.value })}
-              />
-              <input
-                type="tel"
-                placeholder="Mobile"
-                required
-                maxLength={10}
-                className="w-full border px-3 py-2 rounded-lg text-sm md:text-base"
-                value={employeeData.mobile}
-                onChange={e => {
-                  const val = e.target.value.replace(/[^0-9]/g, '');
-                  if (val.length <= 10) setEmployeeData({ ...employeeData, mobile: val });
-                }}
-              />
-              <input
-                type="email"
-                placeholder="Email"
-                required
-                className="w-full border px-3 py-2 rounded-lg text-sm md:text-base"
-                value={employeeData.email}
-                onChange={e => setEmployeeData({ ...employeeData, email: e.target.value })}
-              />
-              <input
-                type="password"
-                placeholder="Password"
-                required
-                minLength={6}
-                className="w-full border px-3 py-2 rounded-lg text-sm md:text-base"
-                value={employeeData.password}
-                onChange={e => setEmployeeData({ ...employeeData, password: e.target.value })}
-              />
+        // PREMIUM MODAL UPGRADE START
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4 font-sans" style={{ fontFamily: "'Poppins', 'Inter', 'sans-serif'" }}>
+          <div className="relative bg-white rounded-2xl shadow-2xl border border-yellow-200 w-full max-w-md p-6 z-10 bg-gradient-to-br from-yellow-50 to-white">
+            <h3 className="text-2xl font-bold mb-1 text-yellow-600 tracking-tight">Add Employee to {selectedStore?.name}</h3>
+            <div className="h-1 w-16 bg-yellow-400 rounded-full mb-4"></div>
+            <form onSubmit={handleAddEmployee} className="space-y-4">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Name"
+                  required
+                  className="w-full border border-yellow-200 px-4 py-3 rounded-lg text-base bg-yellow-50 focus:ring-2 focus:ring-yellow-400 focus:outline-none transition pl-10"
+                  value={employeeData.name}
+                  onChange={e => setEmployeeData({ ...employeeData, name: e.target.value })}
+                />
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-yellow-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 15c2.5 0 4.847.655 6.879 1.804M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                </span>
+              </div>
+              <div className="relative">
+                <input
+                  type="tel"
+                  placeholder="Mobile"
+                  required
+                  maxLength={10}
+                  pattern="[0-9]{10}"
+                  className="w-full border border-yellow-200 px-4 py-3 rounded-lg text-base bg-yellow-50 focus:ring-2 focus:ring-yellow-400 focus:outline-none transition pl-10"
+                  value={employeeData.mobile}
+                  onChange={e => {
+                    // Only allow numbers and max 10 digits
+                    const val = e.target.value.replace(/[^0-9]/g, '');
+                    if (val.length <= 10) setEmployeeData({ ...employeeData, mobile: val });
+                  }}
+                  inputMode="numeric"
+                  autoComplete="off"
+                />
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-yellow-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 7M7 13l-2 5m5-5v5m4-5v5m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v1m6 0H6" /></svg>
+                </span>
+              </div>
+              <div className="relative">
+                <input
+                  type="email"
+                  placeholder="Email"
+                  required
+                  className="w-full border border-yellow-200 px-4 py-3 rounded-lg text-base bg-yellow-50 focus:ring-2 focus:ring-yellow-400 focus:outline-none transition pl-10"
+                  value={employeeData.email}
+                  onChange={e => setEmployeeData({ ...employeeData, email: e.target.value })}
+                />
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-yellow-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12H8m8 0a4 4 0 11-8 0 4 4 0 018 0zm0 0v1a4 4 0 01-8 0v-1m8 0H8" /></svg>
+                </span>
+              </div>
+              <div className="relative">
+                <input
+                  type="password"
+                  placeholder="Password"
+                  required
+                  minLength={6}
+                  className="w-full border border-yellow-200 px-4 py-3 rounded-lg text-base bg-yellow-50 focus:ring-2 focus:ring-yellow-400 focus:outline-none transition pl-10"
+                  value={employeeData.password}
+                  onChange={e => setEmployeeData({ ...employeeData, password: e.target.value })}
+                />
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-yellow-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 11c0-1.104.896-2 2-2s2 .896 2 2-.896 2-2 2-2-.896-2-2zm0 0V7m0 4v4m0 0a4 4 0 100-8 4 4 0 000 8z" /></svg>
+                </span>
+              </div>
               <select
-                className="w-full border px-3 py-2 rounded-lg text-sm md:text-base"
+                className="w-full border border-yellow-200 px-4 py-3 rounded-lg text-base bg-yellow-50 focus:ring-2 focus:ring-yellow-400 focus:outline-none transition"
                 value={employeeData.role}
                 onChange={e => setEmployeeData({ ...employeeData, role: e.target.value })}
               >
                 <option value="Employee">Employee</option>
-               
               </select>
-              <div className="flex justify-end space-x-2">
+              <div className="flex justify-end space-x-2 mt-2">
                 <button
                   type="button"
                   onClick={() => setShowAddEmployeeModal(false)}
-                  className="px-3 py-1.5 text-gray-500 hover:text-gray-700 text-sm md:text-base"
+                  className="px-4 py-2 text-gray-500 hover:text-gray-700 text-base transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-3 py-1.5 md:px-4 md:py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 text-sm md:text-base"
+                  className={`px-6 py-2 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white rounded-lg shadow-lg hover:from-yellow-500 hover:to-yellow-600 font-semibold text-base transition flex items-center justify-center ${loading ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  disabled={loading}
                 >
-                  Add
+                  {loading ? (
+                    <svg className="animate-spin h-5 w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                    </svg>
+                  ) : null}
+                  {loading ? 'Adding...' : 'Add'}
                 </button>
               </div>
             </form>
           </div>
         </div>
+        // PREMIUM MODAL UPGRADE END
       )}
 
         {/* Notification Toast */}
