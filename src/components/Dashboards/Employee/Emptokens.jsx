@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Adminheader from './Employeeheader';
 import { db } from '../../../firebase';
 import { collection, addDoc, getDocs, serverTimestamp } from 'firebase/firestore';
 import { FaCheckCircle, FaExclamationCircle, FaUser, FaFileAlt, FaEdit, FaRupeeSign, FaPrint, FaFileSignature } from 'react-icons/fa';
+import { useStore } from '../Admin/StoreContext';
+import { useNavigate } from 'react-router-dom';
  
 function Emptokens() {
   const [form, setForm] = useState({ name: '', purpose: 'GTS', amount: '' });
@@ -10,16 +12,27 @@ function Emptokens() {
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
-  const [tokenNo, setTokenNo] = useState('');
+  const navigate = useNavigate();
+  const { selectedStore } = useStore();
+  
+  // Navigate to employee dashboard if no store is selected
+  useEffect(() => {
+    if (!selectedStore) navigate('/employee');
+  }, [selectedStore, navigate]);
  
   useEffect(() => {
     const fetchTokenCount = async () => {
+      if (!selectedStore) return;
       const snapshot = await getDocs(collection(db, 'tokens'));
-      const nextNum = snapshot.size + 1;
-      setTokenNo(`Tk-${String(nextNum).padStart(2, '0')}`);
+      // Count only tokens for the selected store
+      const storeTokens = snapshot.docs.filter(doc => doc.data().storeId === selectedStore.id);
+      const nextNum = storeTokens.length + 1;
+      // Generate token number directly without state
+      const tokenNumber = `Tk-${String(nextNum).padStart(2, '0')}`;
+      return tokenNumber;
     };
     fetchTokenCount();
-  }, [preview]);
+  }, [preview, selectedStore]);
  
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -46,13 +59,15 @@ function Emptokens() {
         amount: form.amount,
         tokenNo: tokenNumber,
         date: dateStr,
+        storeId: selectedStore?.id,
+        storeName: selectedStore?.name,
         createdAt: serverTimestamp(),
       });
       setPreview({ ...form, purpose: form.purpose === 'CUSTOM' ? customPurpose : form.purpose, tokenNo: tokenNumber, date: dateStr });
       setForm({ name: '', purpose: 'GTS', amount: '' });
       setCustomPurpose('');
       setToast({ show: true, message: 'Token generated successfully!', type: 'success' });
-    } catch (err) {
+    } catch {
       setToast({ show: true, message: 'Error generating token.', type: 'error' });
     }
     setLoading(false);
@@ -81,6 +96,19 @@ function Emptokens() {
     <>
       <Adminheader />
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-100 py-8 px-2">
+        {/* Store Indicator */}
+        {selectedStore && (
+          <div className="w-full max-w-4xl mb-4">
+            <div className="bg-blue-100 border border-blue-300 rounded-lg p-4 text-center">
+              <h3 className="text-lg font-bold text-blue-800">
+                🏪 Working for: <span className="text-blue-900">{selectedStore.name}</span>
+              </h3>
+              <p className="text-blue-700 text-sm mt-1">
+                All tokens will be recorded for {selectedStore.name}
+              </p>
+            </div>
+          </div>
+        )}
         <div className="w-full max-w-4xl flex flex-col md:flex-row gap-10 items-start">
           {/* Form Card */}
           <form onSubmit={handleSubmit} className="flex-1 bg-white rounded-2xl shadow-2xl p-10 space-y-8 border border-blue-100">

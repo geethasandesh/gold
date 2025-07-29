@@ -3,8 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { auth, db } from '../../../firebase';
 import { signOut } from 'firebase/auth';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { FaCoins, FaExchangeAlt, FaShoppingCart, FaClipboardList, FaChartLine, FaFileAlt, FaChevronDown, FaUserCircle, FaSignOutAlt } from 'react-icons/fa';
+import { FaCoins, FaExchangeAlt, FaShoppingCart, FaClipboardList, FaChartLine, FaFileAlt, FaChevronDown, FaUserCircle, FaSignOutAlt, FaGem } from 'react-icons/fa';
 import { MdDashboard } from 'react-icons/md';
+import { GiGoldBar, GiDiamondRing, GiJewelCrown } from 'react-icons/gi';
  
 function stringToInitials(nameOrEmail) {
   if (!nameOrEmail) return 'U';
@@ -48,51 +49,76 @@ function Employeeheader() {
   };
  
   return (
-    <header className="bg-gradient-to-r from-blue-800 via-blue-600 to-blue-400 shadow-lg">
-      <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between py-4 px-4 sm:px-8">
-        <div className="flex items-center space-x-3 mb-4 sm:mb-0">
+    <header className="bg-gradient-to-r from-amber-900 via-yellow-700 to-amber-600 shadow-lg border-b-2 border-yellow-400">
+      <div className="w-full flex items-center justify-between py-2 px-4 sm:px-6">
+        {/* Logo Section */}
+        <div className="flex items-center space-x-2">
           <Link
             to="/employee"
-            className="rounded-xl px-4 py-2 shadow-none flex items-center transition hover:bg-blue-900/40 active:scale-95 focus:outline-none focus:ring-2 focus:ring-yellow-300"
+            className="rounded-lg px-2 py-1 flex items-center transition hover:bg-amber-800/40 active:scale-95 focus:outline-none focus:ring-2 focus:ring-yellow-300"
             style={{ textDecoration: 'none' }}
           >
-            <MdDashboard className="h-7 w-7 text-yellow-300 mr-2" />
-            <span className="text-2xl font-extrabold tracking-tight text-white drop-shadow">Employee Dashboard</span>
+            <GiJewelCrown className="h-6 w-6 text-yellow-300 mr-2 drop-shadow-lg" />
+            <span className="text-lg font-bold tracking-tight text-white drop-shadow-lg">S M D B Employee Portal</span>
           </Link>
         </div>
-        <nav className="flex flex-wrap gap-2 sm:gap-4 items-center justify-center">
-          <Link to="/employee/tokens" className="flex items-center gap-1 px-3 py-2 rounded-lg text-white hover:bg-blue-900 transition font-medium">
-            <FaCoins className="w-5 h-5" />
+ 
+        {/* Navigation Section */}
+        <nav className="hidden lg:flex items-center gap-3">
+          <Link to="/employee/tokens" className="flex items-center gap-1 px-3 py-1.5 rounded-md text-white hover:bg-amber-800/60 transition font-medium text-sm border border-yellow-400/30">
+            <FaCoins className="w-4 h-4 text-yellow-300" />
             Tokens
           </Link>
-          <Link to="/employee/exchanges" className="flex items-center gap-1 px-3 py-2 rounded-lg text-white hover:bg-blue-900 transition font-medium">
-            <FaExchangeAlt className="w-5 h-5" />
+          <Link to="/employee/exchanges" className="flex items-center gap-1 px-3 py-1.5 rounded-md text-white hover:bg-amber-800/60 transition font-medium text-sm border border-yellow-400/30">
+            <FaExchangeAlt className="w-4 h-4 text-yellow-300" />
             Exchanges
           </Link>
-          <Link to="/employee/purchases" className="flex items-center gap-1 px-3 py-2 rounded-lg text-white hover:bg-blue-900 transition font-medium">
-            <FaShoppingCart className="w-5 h-5" />
-            Purchases
-          </Link>
-          <Link to="/employee/order-management" className="flex items-center gap-1 px-3 py-2 rounded-lg text-white hover:bg-blue-900 transition font-medium">
-            <FaClipboardList className="w-5 h-5" />
-            Orders
-          </Link>
-          <Link to="/employee/sales" className="flex items-center gap-1 px-3 py-2 rounded-lg text-white hover:bg-blue-900 transition font-medium">
-            <FaChartLine className="w-5 h-5" />
+          <Link to="/employee/sales" className="flex items-center gap-1 px-3 py-1.5 rounded-md text-white hover:bg-amber-800/60 transition font-medium text-sm border border-yellow-400/30">
+            <FaChartLine className="w-4 h-4 text-yellow-300" />
             Sales
           </Link>
-          <Link to="/employee/test-reports" className="flex items-center gap-1 px-3 py-2 rounded-lg text-white hover:bg-blue-900 transition font-medium">
-            <FaFileAlt className="w-5 h-5" />
-            Reports
+          <Link to="/employee/purchases" className="flex items-center gap-1 px-3 py-1.5 rounded-md text-white hover:bg-amber-800/60 transition font-medium text-sm border border-yellow-400/30">
+            <FaShoppingCart className="w-4 h-4 text-yellow-300" />
+            Purchases
+          </Link>
+          <Link to="/employee/order-management" className="flex items-center gap-1 px-3 py-1.5 rounded-md text-white hover:bg-amber-800/60 transition font-medium text-sm border border-yellow-400/30">
+            <FaClipboardList className="w-4 h-4 text-yellow-300" />
+            Orders
           </Link>
         </nav>
-        <div className="flex items-center space-x-3 mt-4 sm:mt-0">
+ 
+        {/* Mobile Navigation */}
+        <nav className="flex lg:hidden items-center gap-2">
+          <Link to="/employee/tokens" className="flex items-center gap-1 px-2 py-1 rounded-md text-white hover:bg-amber-800/60 transition text-xs border border-yellow-400/30">
+            <FaCoins className="w-3 h-3 text-yellow-300" />
+            <span className="hidden sm:inline">Tokens</span>
+          </Link>
+          <Link to="/employee/exchanges" className="flex items-center gap-1 px-2 py-1 rounded-md text-white hover:bg-amber-800/60 transition text-xs border border-yellow-400/30">
+            <FaExchangeAlt className="w-3 h-3 text-yellow-300" />
+            <span className="hidden sm:inline">Exchanges</span>
+          </Link>
+          <Link to="/employee/sales" className="flex items-center gap-1 px-2 py-1 rounded-md text-white hover:bg-amber-800/60 transition text-xs border border-yellow-400/30">
+            <FaChartLine className="w-3 h-3 text-yellow-300" />
+            <span className="hidden sm:inline">Sales</span>
+          </Link>
+          <Link to="/employee/purchases" className="flex items-center gap-1 px-2 py-1 rounded-md text-white hover:bg-amber-800/60 transition text-xs border border-yellow-400/30">
+            <FaShoppingCart className="w-3 h-3 text-yellow-300" />
+            <span className="hidden sm:inline">Purchases</span>
+          </Link>
+          <Link to="/employee/order-management" className="flex items-center gap-1 px-2 py-1 rounded-md text-white hover:bg-amber-800/60 transition text-xs border border-yellow-400/30">
+            <FaClipboardList className="w-3 h-3 text-yellow-300" />
+            <span className="hidden sm:inline">Orders</span>
+          </Link>
+        </nav>
+ 
+        {/* User Section */}
+        <div className="flex items-center">
           <button
             onClick={() => setShowLogoutModal(true)}
-            className="flex items-center space-x-2 px-4 py-2 rounded-xl transition-colors shadow-none hover:bg-blue-900/40"
+            className="flex items-center space-x-1 px-3 py-1.5 rounded-lg transition-colors hover:bg-amber-800/40 border border-yellow-400/30"
           >
-            <FaUserCircle className="w-8 h-8 text-blue-900 bg-yellow-300 rounded-full border-2 border-blue-300" />
-            <FaChevronDown className="h-5 w-5 text-white ml-2" />
+            <FaUserCircle className="w-6 h-6 text-amber-900 bg-yellow-300 rounded-full border border-yellow-400" />
+            <FaChevronDown className="h-4 w-4 text-white" />
           </button>
         </div>
       </div>
@@ -125,12 +151,6 @@ function Employeeheader() {
         </div>
       )}
       <style>{`
-        @media (max-width: 640px) {
-          nav {
-            flex-direction: column;
-            gap: 0.5rem;
-          }
-        }
         .animate-fadeIn {
           animation: fadeIn 0.3s ease;
         }
@@ -144,3 +164,4 @@ function Employeeheader() {
 }
  
 export default Employeeheader;
+ 

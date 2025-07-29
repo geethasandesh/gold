@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import Adminheader from './Adminheader';
 import { db } from '../../../firebase';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, where } from 'firebase/firestore';
 import ExcelJS from 'exceljs';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { CheckCircle, AlertCircle } from 'lucide-react';
+import { useStore } from './StoreContext';
+import { useNavigate } from 'react-router-dom';
 
 function Reports() {
   const [tab, setTab] = useState('EXCHANGES');
@@ -44,28 +46,76 @@ function Reports() {
   });
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
+  const { selectedStore } = useStore();
+  const navigate = useNavigate();
+
+  // Navigate to admin if no store is selected
+  useEffect(() => {
+    if (!selectedStore) navigate('/admin');
+  }, [selectedStore, navigate]);
+
   useEffect(() => {
     const fetchData = async () => {
+      if (!selectedStore) return;
+      
       setLoading(true);
-      const exQ = query(collection(db, 'exchanges'), orderBy('createdAt', 'desc'));
-      const exSnap = await getDocs(exQ);
-      setExchanges(exSnap.docs.map(doc => doc.data()));
-      const purQ = query(collection(db, 'purchases'), orderBy('createdAt', 'desc'));
-      const purSnap = await getDocs(purQ);
-      setPurchases(purSnap.docs.map(doc => doc.data()));
-      const saleQ = query(collection(db, 'sales'), orderBy('createdAt', 'desc'));
-      const saleSnap = await getDocs(saleQ);
-      setSales(saleSnap.docs.map(doc => doc.data()));
-      const cashQ = query(collection(db, 'cashmovements'), orderBy('createdAt', 'desc'));
-      const cashSnap = await getDocs(cashQ);
-      setCashMovements(cashSnap.docs.map(doc => doc.data()));
-      const tokenQ = query(collection(db, 'tokens'), orderBy('createdAt', 'desc'));
-      const tokenSnap = await getDocs(tokenQ);
-      setTokens(tokenSnap.docs.map(doc => doc.data()));
-      setLoading(false);
+      try {
+        // Helper function to fetch data with fallback
+        const fetchWithFallback = async (collectionName) => {
+          try {
+            // Try optimized query first
+            const q = query(
+              collection(db, collectionName), 
+              where('storeId', '==', selectedStore.id),
+              orderBy('createdAt', 'desc')
+            );
+            const snap = await getDocs(q);
+            return snap.docs.map(doc => doc.data());
+          } catch (error) {
+            if (error.message.includes('index')) {
+              // Fallback to client-side sorting if index not ready
+              console.log(`Index not ready for ${collectionName}, using client-side sorting`);
+              const q = query(
+                collection(db, collectionName), 
+                where('storeId', '==', selectedStore.id)
+              );
+              const snap = await getDocs(q);
+              const data = snap.docs.map(doc => doc.data());
+              // Sort in memory
+              data.sort((a, b) => {
+                const dateA = a.createdAt?.toDate?.() || new Date(a.createdAt) || new Date(0);
+                const dateB = b.createdAt?.toDate?.() || new Date(b.createdAt) || new Date(0);
+                return dateB - dateA;
+              });
+              return data;
+            }
+            throw error;
+          }
+        };
+
+        // Fetch all data with fallback
+        const [exchangesData, purchasesData, salesData, cashData, tokensData] = await Promise.all([
+          fetchWithFallback('exchanges'),
+          fetchWithFallback('purchases'),
+          fetchWithFallback('sales'),
+          fetchWithFallback('cashmovements'),
+          fetchWithFallback('tokens')
+        ]);
+
+        setExchanges(exchangesData);
+        setPurchases(purchasesData);
+        setSales(salesData);
+        setCashMovements(cashData);
+        setTokens(tokensData);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        showToast('Error loading reports data', 'error');
+      } finally {
+        setLoading(false);
+      }
     };
     fetchData();
-  }, []);
+  }, [selectedStore]);
 
   // Helper function to show toast messages
   const showToast = (message, type = 'success') => {
@@ -262,7 +312,7 @@ function Reports() {
     
     // Add title
     const titleRow = worksheet.getRow(1);
-    titleRow.getCell(1).value = '📊 EXCHANGES REPORT';
+    titleRow.getCell(1).value = `📊 EXCHANGES REPORT - ${selectedStore?.name || 'Unknown Store'}`;
     worksheet.mergeCells(1, 1, 1, 10);
     
     // Style title
@@ -410,7 +460,7 @@ function Reports() {
     
     // Add title
     const titleRow = worksheet.getRow(1);
-    titleRow.getCell(1).value = '💰 PURCHASES REPORT';
+    titleRow.getCell(1).value = `💰 PURCHASES REPORT - ${selectedStore?.name || 'Unknown Store'}`;
     worksheet.mergeCells(1, 1, 1, 13);
     
     // Style title
@@ -686,7 +736,7 @@ function Reports() {
     
     // Add title
     const titleRow = worksheet.getRow(1);
-    titleRow.getCell(1).value = '🛒 SALES REPORT';
+    titleRow.getCell(1).value = `🛒 SALES REPORT - ${selectedStore?.name || 'Unknown Store'}`;
     worksheet.mergeCells(1, 1, 1, 9);
     
     // Style title
@@ -892,7 +942,7 @@ function Reports() {
     
     // Add title
     const titleRow = worksheet.getRow(1);
-    titleRow.getCell(1).value = '💵 CASH MOVEMENTS REPORT';
+    titleRow.getCell(1).value = `💵 CASH MOVEMENTS REPORT - ${selectedStore?.name || 'Unknown Store'}`;
     worksheet.mergeCells(1, 1, 1, 6);
     
     // Style title
@@ -1048,7 +1098,7 @@ function Reports() {
     
     // Add title
     const titleRow = worksheet.getRow(1);
-    titleRow.getCell(1).value = '📊💰 EXCHANGES & PURCHASES UNIFIED REPORT';
+    titleRow.getCell(1).value = `📊💰 EXCHANGES & PURCHASES UNIFIED REPORT - ${selectedStore?.name || 'Unknown Store'}`;
     worksheet.mergeCells(1, 1, 1, 14);
     
     // Style title
@@ -1898,7 +1948,20 @@ function Reports() {
   return (
     <>
       <Adminheader />
-      <div className="min-h-screen flex flex-col items-center bg-gradient-to-br from-yellow-50 to-yellow-200 py-8 px-2">
+      <div className="min-h-screen flex flex-col items-center bg-gradient-to-br from-yellow-50 to-yellow-50 py-8 px-2">
+        {/* Store Indicator */}
+        {selectedStore && (
+          <div className="w-full max-w-6xl mb-4">
+            <div className="bg-yellow-100 border border-yellow-300 rounded-lg p-4 text-center">
+              <h2 className="text-xl font-bold text-yellow-800">
+                📊 Reports for: <span className="text-yellow-900">{selectedStore.name}</span>
+              </h2>
+              <p className="text-yellow-700 text-sm mt-1">
+                Showing data exclusively for {selectedStore.name}
+              </p>
+            </div>
+          </div>
+        )}
         <div className="w-full max-w-6xl bg-white/90 rounded-2xl shadow-xl p-8 border border-yellow-100 mt-8">
           <div className="flex gap-4 mb-6">
             <button onClick={() => setTab('EXCHANGES')} className={`px-6 py-2 rounded-lg font-bold ${tab === 'EXCHANGES' ? 'bg-yellow-400 text-black' : 'bg-gray-200 text-gray-700'}`}>Exchanges</button>

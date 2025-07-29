@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { db, auth } from '../../../firebase';
 import { collection, addDoc, getDocs, query, where, serverTimestamp, updateDoc, doc } from 'firebase/firestore';
 import Employeeheader from './Employeeheader';
+import { useStore } from '../Admin/StoreContext';
  
 function SaleConfirm() {
   const location = useLocation();
@@ -19,6 +20,13 @@ function SaleConfirm() {
   const [localRemaining, setLocalRemaining] = useState(0);
   const [bankAvailable, setBankAvailable] = useState(0);
   const [bankRemaining, setBankRemaining] = useState(0);
+  
+  const { selectedStore } = useStore();
+  
+  // Navigate to employee dashboard if no store is selected
+  useEffect(() => {
+    if (!selectedStore) navigate('/employee');
+  }, [selectedStore, navigate]);
  
   const localType = data.saleType === 'SILVER' ? 'LOCAL SILVER' : 'LOCAL GOLD';
   const bankType = data.saleType === 'SILVER' ? 'KAMAL SILVER' : 'BANK GOLD';
@@ -47,9 +55,15 @@ function SaleConfirm() {
   // Fetch available stock
   useEffect(() => {
     const fetchAvailable = async () => {
+      if (!selectedStore) return;
+      
       const reservesCol = data.saleType === 'GOLD' ? 'goldreserves' : 'silverreserves';
       const typeVal = selectedSource === localType ? localType : bankType;
-      const q = query(collection(db, reservesCol), where('type', '==', typeVal));
+      const q = query(
+        collection(db, reservesCol), 
+        where('type', '==', typeVal),
+        where('storeId', '==', selectedStore.id)
+      );
       const snapshot = await getDocs(q);
       let latestTotal = 0;
       snapshot.forEach(docSnap => {
@@ -65,12 +79,19 @@ function SaleConfirm() {
       // Notify admin if insufficient
       if (rem < 0) {
         const notifCol = collection(db, 'admin_notifications');
-        const notifQ = query(notifCol, where('reserveType', '==', typeVal), where('seen', '==', false));
+        const notifQ = query(
+          notifCol, 
+          where('reserveType', '==', typeVal), 
+          where('storeId', '==', selectedStore.id),
+          where('seen', '==', false)
+        );
         const notifSnap = await getDocs(notifQ);
         if (notifSnap.empty) {
           await addDoc(notifCol, {
             reserveType: typeVal,
-            message: `${typeVal} is insufficient for sale! Only ${latestTotal}g available.`,
+            storeId: selectedStore.id,
+            storeName: selectedStore.name,
+            message: `${typeVal} is insufficient for sale in ${selectedStore.name}! Only ${latestTotal}g available.`,
             createdAt: serverTimestamp(),
             seen: false,
             link: reservesCol === 'goldreserves' ? '/admin/gold-reserves' : '/admin/silver-reserves',
@@ -79,13 +100,19 @@ function SaleConfirm() {
       }
     };
     fetchAvailable();
-  }, [data.saleType, selectedSource, data.weight]);
+  }, [data.saleType, selectedSource, data.weight, selectedStore]);
  
   // Fetch available cash for selected mode
   useEffect(() => {
     const fetchCash = async () => {
+      if (!selectedStore) return;
+      
       const mode = data.mode === 'CASH' ? 'LEDGER' : 'ONLINE';
-      const q = query(collection(db, 'cashreserves'), where('type', '==', mode));
+      const q = query(
+        collection(db, 'cashreserves'), 
+        where('type', '==', mode),
+        where('storeId', '==', selectedStore.id)
+      );
       const snapshot = await getDocs(q);
       let latest = 0;
       snapshot.forEach(docSnap => {
@@ -99,14 +126,20 @@ function SaleConfirm() {
       // setRemainingCash(latest - amt); // Removed
     };
     fetchCash();
-  }, [data.mode, data.amount]);
+  }, [data.mode, data.amount, selectedStore]);
  
   // Fetch both local and bank available/remaining
   useEffect(() => {
     const fetchBoth = async () => {
+      if (!selectedStore) return;
+      
       const reservesCol = data.saleType === 'GOLD' ? 'goldreserves' : 'silverreserves';
       // Local
-      const qLocal = query(collection(db, reservesCol), where('type', '==', localType));
+      const qLocal = query(
+        collection(db, reservesCol), 
+        where('type', '==', localType),
+        where('storeId', '==', selectedStore.id)
+      );
       const snapLocal = await getDocs(qLocal);
       let localTotal = 0;
       snapLocal.forEach(docSnap => {
@@ -119,7 +152,11 @@ function SaleConfirm() {
       const weight = parseFloat(data.weight) || 0;
       setLocalRemaining(localTotal - weight);
       // Bank
-      const qBank = query(collection(db, reservesCol), where('type', '==', bankType));
+      const qBank = query(
+        collection(db, reservesCol), 
+        where('type', '==', bankType),
+        where('storeId', '==', selectedStore.id)
+      );
       const snapBank = await getDocs(qBank);
       let bankTotal = 0;
       snapBank.forEach(docSnap => {
@@ -132,7 +169,7 @@ function SaleConfirm() {
       setBankRemaining(bankTotal - weight);
     };
     fetchBoth();
-  }, [data.saleType, data.weight]);
+  }, [data.saleType, data.weight, selectedStore]);
  
   // Print functionality
   const handleApprove = async () => {
@@ -141,7 +178,11 @@ function SaleConfirm() {
     try {
       // Add to cashreserves if mode is CASH/ONLINE
       const mode = data.mode === 'CASH' ? 'LEDGER' : 'ONLINE';
-      const q = query(collection(db, 'cashreserves'), where('type', '==', mode));
+      const q = query(
+        collection(db, 'cashreserves'), 
+        where('type', '==', mode),
+        where('storeId', '==', selectedStore.id)
+      );
       const snapshot = await getDocs(q);
       let docId = null;
       let current = 0;
@@ -158,7 +199,12 @@ function SaleConfirm() {
         await updateDoc(doc(db, 'cashreserves', docId), { available: newTotal });
       } else {
         // If not found, create it
-        await addDoc(collection(db, 'cashreserves'), { type: mode, available: newTotal });
+        await addDoc(collection(db, 'cashreserves'), { 
+          type: mode, 
+          available: newTotal,
+          storeId: selectedStore.id,
+          storeName: selectedStore.name
+        });
       }
       // Log cash movement
       await addDoc(collection(db, 'cashmovements'), {
@@ -168,11 +214,17 @@ function SaleConfirm() {
         newBalance: newTotal,
         reason: 'sale',
         by: employee,
+        storeId: selectedStore.id,
+        storeName: selectedStore.name,
         createdAt: serverTimestamp(),
       });
       const reservesCol = data.saleType === 'GOLD' ? 'goldreserves' : 'silverreserves';
       const typeVal = selectedSource === localType ? localType : bankType;
-      const qReserves = query(collection(db, reservesCol), where('type', '==', typeVal));
+      const qReserves = query(
+        collection(db, reservesCol), 
+        where('type', '==', typeVal),
+        where('storeId', '==', selectedStore.id)
+      );
       const snapshotReserves = await getDocs(qReserves);
       let latestTotal = 0;
       let latestDocIdReserves = null;
@@ -194,12 +246,19 @@ function SaleConfirm() {
       // Low stock notification logic
       if (newTotalReserves < 10) {
         const notifCol = collection(db, 'admin_notifications');
-        const notifQ = query(notifCol, where('reserveType', '==', typeVal), where('seen', '==', false));
+        const notifQ = query(
+          notifCol, 
+          where('reserveType', '==', typeVal), 
+          where('storeId', '==', selectedStore.id),
+          where('seen', '==', false)
+        );
         const notifSnap = await getDocs(notifQ);
         if (notifSnap.empty) {
           await addDoc(notifCol, {
             reserveType: typeVal,
-            message: `${typeVal} is low: ${newTotalReserves}g remaining!`,
+            storeId: selectedStore.id,
+            storeName: selectedStore.name,
+            message: `${typeVal} is low in ${selectedStore.name}: ${newTotalReserves}g remaining!`,
             createdAt: serverTimestamp(),
             seen: false,
             link: reservesCol === 'goldreserves' ? '/admin/gold-reserves' : '/admin/silver-reserves',
@@ -210,6 +269,8 @@ function SaleConfirm() {
         ...data,
         source: selectedSource,
         employee,
+        storeId: selectedStore.id,
+        storeName: selectedStore.name,
         date: new Date().toLocaleDateString('en-GB'),
         createdAt: serverTimestamp(),
       });
@@ -230,6 +291,19 @@ function SaleConfirm() {
     <>
       <Employeeheader />
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-yellow-50 to-yellow-200 py-8 px-2">
+        {/* Store Indicator */}
+        {selectedStore && (
+          <div className="w-full max-w-lg mb-4">
+            <div className="bg-yellow-100 border border-yellow-300 rounded-lg p-4 text-center">
+              <h3 className="text-lg font-bold text-yellow-800">
+                🏪 Working for: <span className="text-yellow-900">{selectedStore.name}</span>
+              </h3>
+              <p className="text-yellow-700 text-sm mt-1">
+                Sale will be recorded for {selectedStore.name}
+              </p>
+            </div>
+          </div>
+        )}
         <div className="w-full max-w-lg bg-white/90 rounded-2xl shadow-xl p-8 border border-yellow-100">
           <h2 className="text-xl font-bold text-yellow-700 mb-4 text-center">Calculation part</h2>
           <div id="sale-receipt" className="border-2 border-black rounded-lg p-6 mb-6 font-mono">

@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { db, auth } from '../../../firebase';
 import { collection, addDoc, getDocs, query, where, serverTimestamp, updateDoc, doc } from 'firebase/firestore';
 import Employeeheader from './Employeeheader';
+import { useStore } from '../Admin/StoreContext';
  
 function ExchangeConfirm() {
   const location = useLocation();
@@ -19,6 +20,13 @@ function ExchangeConfirm() {
   const localType = data.type === 'SILVER' ? 'LOCAL SILVER' : 'LOCAL GOLD';
   const bankType = data.type === 'SILVER' ? 'KAMAL SILVER' : 'BANK GOLD';
  
+  const { selectedStore } = useStore();
+  
+  // Navigate to employee dashboard if no store is selected
+  useEffect(() => {
+    if (!selectedStore) navigate('/employee');
+  }, [selectedStore, navigate]);
+  
   const [selectedSource, setSelectedSource] = useState(data.source || localType);
  
   // Labels
@@ -48,9 +56,15 @@ function ExchangeConfirm() {
   // Fetch available stock
   useEffect(() => {
     const fetchAvailable = async () => {
+      if (!selectedStore) return;
+      
       const reservesCol = data.type === 'GOLD' ? 'goldreserves' : 'silverreserves';
       const typeVal = selectedSource === localType ? localType : bankType;
-      const q = query(collection(db, reservesCol), where('type', '==', typeVal));
+      const q = query(
+        collection(db, reservesCol), 
+        where('type', '==', typeVal),
+        where('storeId', '==', selectedStore.id)
+      );
       const snapshot = await getDocs(q);
       let latestTotal = 0;
       snapshot.forEach(docSnap => {
@@ -68,12 +82,19 @@ function ExchangeConfirm() {
       // Notify admin if insufficient
       if (rem < 0) {
         const notifCol = collection(db, 'admin_notifications');
-        const notifQ = query(notifCol, where('reserveType', '==', typeVal), where('seen', '==', false));
+        const notifQ = query(
+          notifCol, 
+          where('reserveType', '==', typeVal), 
+          where('storeId', '==', selectedStore.id),
+          where('seen', '==', false)
+        );
         const notifSnap = await getDocs(notifQ);
         if (notifSnap.empty) {
           await addDoc(notifCol, {
             reserveType: typeVal,
-            message: `${typeVal} is insufficient for transaction! Only ${latestTotal}g available.`,
+            storeId: selectedStore.id,
+            storeName: selectedStore.name,
+            message: `${typeVal} is insufficient for transaction in ${selectedStore.name}! Only ${latestTotal}g available.`,
             createdAt: serverTimestamp(),
             seen: false,
             link: reservesCol === 'goldreserves' ? '/admin/gold-reserves' : '/admin/silver-reserves',
@@ -82,7 +103,7 @@ function ExchangeConfirm() {
       }
     };
     fetchAvailable();
-  }, [data.type, selectedSource, data.fine]);
+  }, [data.type, selectedSource, data.fine, selectedStore]);
  
   const handleApprove = async () => {
     if (insufficient) return;
@@ -91,7 +112,11 @@ function ExchangeConfirm() {
       const reservesCol = data.type === 'GOLD' ? 'goldreserves' : 'silverreserves';
       const typeVal = selectedSource === localType ? localType : bankType;
  
-      const q = query(collection(db, reservesCol), where('type', '==', typeVal));
+      const q = query(
+        collection(db, reservesCol), 
+        where('type', '==', typeVal),
+        where('storeId', '==', selectedStore.id)
+      );
       const snapshot = await getDocs(q);
  
       let latestTotal = 0;
@@ -117,12 +142,19 @@ function ExchangeConfirm() {
       // Low stock notification logic
       if (newTotal < 10) {
         const notifCol = collection(db, 'admin_notifications');
-        const notifQ = query(notifCol, where('reserveType', '==', typeVal), where('seen', '==', false));
+        const notifQ = query(
+          notifCol, 
+          where('reserveType', '==', typeVal), 
+          where('storeId', '==', selectedStore.id),
+          where('seen', '==', false)
+        );
         const notifSnap = await getDocs(notifQ);
         if (notifSnap.empty) {
           await addDoc(notifCol, {
             reserveType: typeVal,
-            message: `${typeVal} is low: ${newTotal}g remaining!`,
+            storeId: selectedStore.id,
+            storeName: selectedStore.name,
+            message: `${typeVal} is low in ${selectedStore.name}: ${newTotal}g remaining!`,
             createdAt: serverTimestamp(),
             seen: false,
             link: reservesCol === 'goldreserves' ? '/admin/gold-reserves' : '/admin/silver-reserves',
@@ -134,6 +166,8 @@ function ExchangeConfirm() {
         ...data,
         source: selectedSource,
         employee,
+        storeId: selectedStore.id,
+        storeName: selectedStore.name,
         date: new Date().toLocaleDateString('en-GB'),
         createdAt: serverTimestamp(),
       });
@@ -156,6 +190,19 @@ function ExchangeConfirm() {
     <>
       <Employeeheader />
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-yellow-50 to-yellow-200 py-8 px-2">
+        {/* Store Indicator */}
+        {selectedStore && (
+          <div className="w-full max-w-lg mb-4">
+            <div className="bg-yellow-100 border border-yellow-300 rounded-lg p-4 text-center">
+              <h3 className="text-lg font-bold text-yellow-800">
+                🏪 Working for: <span className="text-yellow-900">{selectedStore.name}</span>
+              </h3>
+              <p className="text-yellow-700 text-sm mt-1">
+                Transaction will be recorded for {selectedStore.name}
+              </p>
+            </div>
+          </div>
+        )}
         <div className="w-full max-w-lg bg-white/90 rounded-2xl shadow-xl p-8 border border-yellow-100">
           <h2 className="text-xl font-bold text-yellow-700 mb-4 text-center">Calculation part</h2>
           <div className="border-2 border-black rounded-lg p-6 mb-6 font-mono">

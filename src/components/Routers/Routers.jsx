@@ -1,6 +1,7 @@
 import React from 'react'
 import {Routes, Route} from 'react-router-dom'
 import Adminfile from '../Dashboards/Admin/Adminfile'
+import AdminMainDashboard from '../Dashboards/Admin/AdminMainDashboard'
 import Admintokens from '../Dashboards/Admin/Admintokens'
 import Reports from '../Dashboards/Admin/Reports'
 import Silverreserves from '../Dashboards/Admin/Silverreserves'
@@ -30,6 +31,7 @@ function Routers() {
       <Route path='/admin/reports' element={<Reports/>}/>
       <Route path='/admin/silver-reserves' element={<Silverreserves/>}/>
       <Route path='/admin/gold-reserves' element={<Goldreservers/>}/>
+      <Route path='/admin/dashboard' element={<AdminMainDashboard/>}/>
 
 
 

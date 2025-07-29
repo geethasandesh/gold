@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Employeeheader from './Employeeheader';
 import { useNavigate } from 'react-router-dom';
+import { useStore } from '../Admin/StoreContext';
 
 function Sales() {
   const [saleType, setSaleType] = useState('GOLD');
@@ -13,6 +14,13 @@ function Sales() {
   const [amount, setAmount] = useState('');
   const [selectedSource, setSelectedSource] = useState('LOCAL GOLD');
   const navigate = useNavigate();
+  
+  const { selectedStore } = useStore();
+  
+  // Navigate to employee dashboard if no store is selected
+  useEffect(() => {
+    if (!selectedStore) navigate('/employee');
+  }, [selectedStore, navigate]);
 
   // Payment source labels
   const localLabel = saleType === 'SILVER' ? 'Pay from local silver' : 'Pay from local gold';
@@ -42,6 +50,8 @@ function Sales() {
         saleType,
         amount,
         source: selectedSource,
+        storeId: selectedStore?.id,
+        storeName: selectedStore?.name,
       },
     });
   };
@@ -52,6 +62,19 @@ function Sales() {
     <>
       <Employeeheader />
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-yellow-50 to-yellow-200 py-8 px-2">
+        {/* Store Indicator */}
+        {selectedStore && (
+          <div className="w-full max-w-xl mb-4">
+            <div className="bg-yellow-100 border border-yellow-300 rounded-lg p-4 text-center">
+              <h3 className="text-lg font-bold text-yellow-800">
+                🏪 Working for: <span className="text-yellow-900">{selectedStore.name}</span>
+              </h3>
+              <p className="text-yellow-700 text-sm mt-1">
+                All sales will be recorded for {selectedStore.name}
+              </p>
+            </div>
+          </div>
+        )}
         <div className="w-full max-w-xl bg-white/90 rounded-2xl shadow-xl p-8 border border-yellow-100">
           <h2 className="text-xl font-bold text-yellow-700 mb-6 flex items-center gap-2">{saleType === 'GOLD' ? 'Gold Sale' : 'Silver Sale'}</h2>
           <div className="flex gap-4 mb-4">

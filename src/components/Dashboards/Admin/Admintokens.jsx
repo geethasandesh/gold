@@ -13,26 +13,11 @@ function Admintokens() {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
-  // Get the next token number on mount or after submission
-  const [tokenNo, setTokenNo] = useState('');
   const { selectedStore } = useStore();
   const navigate = useNavigate();
   useEffect(() => {
     if (!selectedStore) navigate('/admin');
   }, [selectedStore, navigate]);
-
-  useEffect(() => {
-    const fetchTokenCount = async () => {
-      if (!selectedStore) return;
-      const tokensRef = collection(db, 'tokens');
-      const snapshot = await getDocs(tokensRef);
-      // Count only tokens for the selected store
-      const storeTokens = snapshot.docs.filter(doc => doc.data().storeId === selectedStore.id);
-      const nextNum = storeTokens.length + 1;
-      setTokenNo(`Tk-${String(nextNum).padStart(2, '0')}`);
-    };
-    fetchTokenCount();
-  }, [preview, selectedStore]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Adminheader from './Adminheader';
 import { db } from '../../../firebase';
-import { collection, query, where, getDocs, serverTimestamp, doc, setDoc, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, serverTimestamp, doc, setDoc } from 'firebase/firestore';
 import { useStore } from './StoreContext';
 import { useNavigate } from 'react-router-dom';
 import { FaUniversity, FaCoins, FaPlus, FaInfoCircle } from 'react-icons/fa';
@@ -16,7 +16,6 @@ function Goldreservers() {
   const [total, setTotal] = useState(0);
   const [pendingAdd, setPendingAdd] = useState(0);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
-  const [history, setHistory] = useState([]);
   const [showTooltip, setShowTooltip] = useState(false);
  
   const { selectedStore } = useStore();
@@ -50,22 +49,7 @@ function Goldreservers() {
     fetchAvailable();
   }, [reserveType, toast, selectedStore]);
  
-  // Fetch recent history
-  useEffect(() => {
-    const fetchHistory = async () => {
-      if (!selectedStore) return;
-      const q = query(
-        collection(db, 'goldreserves'),
-        where('type', '==', reserveType),
-        where('storeId', '==', selectedStore.id),
-        orderBy('createdAt', 'desc'),
-        limit(5)
-      );
-      const snapshot = await getDocs(q);
-      setHistory(snapshot.docs.map(doc => doc.data()));
-    };
-    fetchHistory();
-  }, [reserveType, toast, selectedStore]);
+
  
   // Update total only when add button is clicked
   useEffect(() => {
@@ -151,7 +135,7 @@ function Goldreservers() {
   return (
     <>
       <Adminheader />
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#fffcf5] py-8 px-2">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white py-8 px-2">
         <div className="w-full max-w-2xl flex flex-col items-center">
           <div className="w-full max-w-xl bg-white rounded-3xl shadow-2xl p-10 border border-yellow-100 mt-4">
             <div className="flex items-center justify-between mb-8">
@@ -164,6 +148,19 @@ function Goldreservers() {
                   </div>
                 )}
               </div>
+            </div>
+           
+            {/* Reserve Type Selector */}
+            <div className="mb-6">
+              <label className="block text-base font-semibold text-gray-700 mb-2">Select Gold Reserve Type</label>
+              <select
+                value={reserveType}
+                onChange={(e) => setReserveType(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-400 text-lg bg-white shadow-sm"
+              >
+                <option value="LOCAL GOLD">LOCAL GOLD</option>
+                <option value="BANK GOLD">BANK GOLD</option>
+              </select>
             </div>
             {/* Progress Bar */}
             <div className="mb-6">
@@ -223,7 +220,7 @@ function Goldreservers() {
               </button>
             </div>
             {/* Recent History */}
-            
+         
           </div>
         </div>
         {toast.show && (

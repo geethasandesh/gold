@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Adminheader from './Adminheader';
 import { db } from '../../../firebase';
-import { collection, addDoc, query, where, getDocs, serverTimestamp, doc, setDoc, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, serverTimestamp, doc, setDoc } from 'firebase/firestore';
 import { useStore } from './StoreContext';
 import { useNavigate } from 'react-router-dom';
 import { FaUniversity, FaCoins, FaPlus, FaInfoCircle } from 'react-icons/fa';
@@ -16,7 +16,6 @@ function Silverreserves() {
   const [total, setTotal] = useState(0);
   const [pendingAdd, setPendingAdd] = useState(0);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
-  const [history, setHistory] = useState([]);
   const [showTooltip, setShowTooltip] = useState(false);
  
   const { selectedStore } = useStore();
@@ -50,22 +49,7 @@ function Silverreserves() {
     fetchAvailable();
   }, [reserveType, toast, selectedStore]);
  
-  // Fetch recent history
-  useEffect(() => {
-    const fetchHistory = async () => {
-      if (!selectedStore) return;
-      const q = query(
-        collection(db, 'silverreserves'),
-        where('type', '==', reserveType),
-        where('storeId', '==', selectedStore.id),
-        orderBy('createdAt', 'desc'),
-        limit(5)
-      );
-      const snapshot = await getDocs(q);
-      setHistory(snapshot.docs.map(doc => doc.data()));
-    };
-    fetchHistory();
-  }, [reserveType, toast, selectedStore]);
+
  
   // Update total only when add button is clicked
   useEffect(() => {
@@ -151,7 +135,7 @@ function Silverreserves() {
   return (
     <>
       <Adminheader />
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-100 to-gray-300 py-8 px-2">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white py-8 px-2">
         <div className="w-full max-w-2xl flex flex-col items-center">
           <div className="w-full max-w-xl bg-white/90 rounded-3xl shadow-2xl p-10 border border-gray-300 mt-4">
             <div className="flex items-center justify-between mb-8">
@@ -164,6 +148,19 @@ function Silverreserves() {
                   </div>
                 )}
               </div>
+            </div>
+           
+            {/* Reserve Type Selector */}
+            <div className="mb-6">
+              <label className="block text-base font-semibold text-gray-700 mb-2">Select Silver Reserve Type</label>
+              <select
+                value={reserveType}
+                onChange={(e) => setReserveType(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-400 text-lg bg-white shadow-sm"
+              >
+                <option value="LOCAL SILVER">LOCAL SILVER</option>
+                <option value="KAMAL SILVER">KAMAL SILVER</option>
+              </select>
             </div>
             {/* Progress Bar */}
             <div className="mb-6">
@@ -223,27 +220,7 @@ function Silverreserves() {
               </button>
             </div>
             {/* Recent History */}
-            <div className="mb-2">
-              <div className="font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                Recent Changes
-                <FaInfoCircle className="w-4 h-4 text-gray-400" title="Shows the last 5 changes for this reserve type and store." />
-              </div>
-              <div className="bg-gray-100 rounded-xl p-3 max-h-40 overflow-y-auto shadow-inner">
-                {history.length === 0 ? (
-                  <div className="text-gray-400 text-sm">No recent changes.</div>
-                ) : (
-                  <ul className="text-sm">
-                    {history.map((h, i) => (
-                      <li key={i} className="flex justify-between py-1 border-b border-gray-200 last:border-b-0">
-                        <span>{h.addedingms > 0 ? `+${h.addedingms}` : h.addedingms}g</span>
-                        <span>{h.totalingms}g</span>
-                        <span className="text-gray-500">{h.createdAt && h.createdAt.toDate ? h.createdAt.toDate().toLocaleString() : ''}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
+           
           </div>
         </div>
         {toast.show && (

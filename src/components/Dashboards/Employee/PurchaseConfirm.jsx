@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { db, auth } from '../../../firebase';
 import { collection, addDoc, serverTimestamp, getDocs, query, where, updateDoc, doc } from 'firebase/firestore';
 import Employeeheader from './Employeeheader';
+import { useStore } from '../Admin/StoreContext';
  
 function PurchaseConfirm() {
   const location = useLocation();
@@ -17,6 +18,13 @@ function PurchaseConfirm() {
   // Add for online
   const [availableOnline, setAvailableOnline] = useState(0);
   const [remainingOnline, setRemainingOnline] = useState(0);
+  
+  const { selectedStore } = useStore();
+  
+  // Navigate to employee dashboard if no store is selected
+  useEffect(() => {
+    if (!selectedStore) navigate('/employee');
+  }, [selectedStore, navigate]);
  
   // Fetch employee name
   useState(() => {
@@ -37,8 +45,14 @@ function PurchaseConfirm() {
   // Fetch available cash for both ledger and online
   useEffect(() => {
     const fetchBoth = async () => {
+      if (!selectedStore) return;
+      
       // Ledger
-      const qLedger = query(collection(db, 'cashreserves'), where('type', '==', 'LEDGER'));
+      const qLedger = query(
+        collection(db, 'cashreserves'), 
+        where('type', '==', 'LEDGER'),
+        where('storeId', '==', selectedStore.id)
+      );
       const snapLedger = await getDocs(qLedger);
       let ledger = 0;
       snapLedger.forEach(docSnap => {
@@ -51,7 +65,11 @@ function PurchaseConfirm() {
       const amt = parseFloat(data.amount) || 0;
       setRemainingCash(ledger - amt);
       // Online
-      const qOnline = query(collection(db, 'cashreserves'), where('type', '==', 'ONLINE'));
+      const qOnline = query(
+        collection(db, 'cashreserves'), 
+        where('type', '==', 'ONLINE'),
+        where('storeId', '==', selectedStore.id)
+      );
       const snapOnline = await getDocs(qOnline);
       let online = 0;
       snapOnline.forEach(docSnap => {
@@ -72,7 +90,7 @@ function PurchaseConfirm() {
       }
     };
     fetchBoth();
-  }, [data.paymentType, data.cashMode, data.amount]);
+  }, [data.paymentType, data.cashMode, data.amount, selectedStore]);
  
   const handleApprove = async () => {
     if (insufficient) return;
@@ -84,7 +102,11 @@ function PurchaseConfirm() {
         mode = data.cashMode === 'PHYSICAL' ? 'LEDGER' : 'ONLINE';
       }
       if (mode) {
-        const q = query(collection(db, 'cashreserves'), where('type', '==', mode));
+        const q = query(
+          collection(db, 'cashreserves'), 
+          where('type', '==', mode),
+          where('storeId', '==', selectedStore.id)
+        );
         const snapshot = await getDocs(q);
         let docId = null;
         let current = 0;
@@ -101,12 +123,19 @@ function PurchaseConfirm() {
           await updateDoc(doc(db, 'cashreserves', docId), { available: newTotal });
         } else {
           // If not found, create it
-          await addDoc(collection(db, 'cashreserves'), { type: mode, available: newTotal });
+          await addDoc(collection(db, 'cashreserves'), { 
+            type: mode, 
+            available: newTotal,
+            storeId: selectedStore.id,
+            storeName: selectedStore.name
+          });
         }
       }
       await addDoc(collection(db, 'purchases'), {
         ...data,
         employee,
+        storeId: selectedStore.id,
+        storeName: selectedStore.name,
         date: new Date().toLocaleDateString('en-GB'),
         createdAt: serverTimestamp(),
       });
@@ -166,6 +195,19 @@ function PurchaseConfirm() {
     <>
       <Employeeheader />
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-yellow-50 to-yellow-200 py-8 px-2">
+        {/* Store Indicator */}
+        {selectedStore && (
+          <div className="w-full max-w-lg mb-4">
+            <div className="bg-yellow-100 border border-yellow-300 rounded-lg p-4 text-center">
+              <h3 className="text-lg font-bold text-yellow-800">
+                🏪 Working for: <span className="text-yellow-900">{selectedStore.name}</span>
+              </h3>
+              <p className="text-yellow-700 text-sm mt-1">
+                Purchase will be recorded for {selectedStore.name}
+              </p>
+            </div>
+          </div>
+        )}
         <div className="w-full max-w-lg bg-white/90 rounded-2xl shadow-xl p-8 border border-yellow-100">
           <h2 className="text-xl font-bold text-yellow-700 mb-4 text-center">Calculation part</h2>
           <div id="purchase-receipt" className="border-2 border-black rounded-lg p-6 mb-6 font-mono">

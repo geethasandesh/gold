@@ -166,7 +166,7 @@ function Admindashboard() {
               key={store.id}
               onClick={() => {
                 selectStore(store);
-                navigate('/admin/tokens');
+                navigate('/admin/dashboard');
               }}
               className="rounded-2xl p-4 md:p-6 shadow-lg hover:shadow-2xl transition cursor-pointer relative border-2 border-yellow-400 bg-white/30 backdrop-blur-md h-[440px] flex flex-col justify-between"
             >
