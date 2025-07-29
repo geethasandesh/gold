@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import Adminheader from './Adminheader'
-import { Link } from 'react-router-dom'
-import { FaCoins, FaGem, FaShieldAlt, FaFileAlt, FaChartBar, FaUsers, FaCog, FaDatabase, FaBell, FaExclamationTriangle } from 'react-icons/fa'
+import { Link, useNavigate } from 'react-router-dom'
+import { FaCoins, FaGem, FaFileAlt, FaChartBar, FaUsers, FaCog, FaDatabase, FaBell, FaExclamationTriangle, FaArrowLeft } from 'react-icons/fa'
 import { GiJewelCrown } from 'react-icons/gi'
-import { collection, getDocs, query, where, addDoc } from 'firebase/firestore'
+import { collection, getDocs } from 'firebase/firestore'
 import { db } from '../../../firebase'
  
 const QUICK_ACTIONS = [
@@ -81,6 +81,7 @@ const ALERTS = [
 ]
  
 function AdminMainDashboard() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalUsers: { value: 0, change: 0, loading: true },
     goldReserves: { value: 0, change: 0, loading: true },
@@ -235,8 +236,17 @@ function AdminMainDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-yellow-100">
       <Adminheader />
-     
+      
       <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Back Button */}
+        <div className="mb-6 -ml-38">
+          <button
+            onClick={() => navigate('/admin')}
+            className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
+          >
+            <FaArrowLeft className="w-4 h-4" />
+          </button>
+        </div>
         {/* Welcome Section */}
         <div className="mb-8">
           <div className="flex items-center justify-center gap-4 mb-6">

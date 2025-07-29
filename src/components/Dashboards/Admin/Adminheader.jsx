@@ -67,7 +67,7 @@ function Adminheader() {
       <div className="w-full flex items-center justify-between py-2 px-4 sm:px-6">
         {/* Logo Section */}
         <div className="flex items-center space-x-2">
-          <a href="/admin" className="flex items-center space-x-2">
+          <a href="/admin/dashboard" className="flex items-center space-x-2">
             <div className="text-lg font-bold tracking-tight text-white drop-shadow-lg flex items-center">
               <span className="bg-gradient-to-r from-yellow-300 to-yellow-500 bg-clip-text text-transparent mr-2">&#11044;</span>
               <span className="">Admin Dashboard</span>
@@ -171,7 +171,7 @@ function Adminheader() {
                         </svg>
                       </div>
                       <p className="text-gray-500 font-medium">No new notifications</p>
-                      <p className="text-gray-400 text-sm mt-1">You're all caught up!</p>
+                      <p className="text-gray-400 text-sm mt-1">You&apos;re all caught up!</p>
                     </div>
                   ) : (
                     <div className="p-2">
@@ -239,24 +239,29 @@ function Adminheader() {
  
       {/* Logout Confirmation Modal */}
       {showLogoutModal && (
-        <div className="fixed inset-0 flex items-center justify-center z-50">
-          <div className="absolute inset-0 bg-black bg-opacity-40 backdrop-blur-sm" onClick={() => setShowLogoutModal(false)}></div>
-          <div className="relative bg-white rounded-2xl p-8 shadow-2xl max-w-sm w-full mx-4 border border-yellow-200 animate-fade-in">
-            <h3 className="text-xl font-bold text-yellow-800 mb-4 flex items-center">
-              <svg className="h-6 w-6 mr-2 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
-              Confirm Logout
-            </h3>
-            <p className="text-gray-600 mb-6">Are you sure you want to logout?</p>
-            <div className="flex justify-end space-x-3">
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4 font-sans bg-black/20 backdrop-blur-sm">
+          <div className="relative bg-white rounded-2xl shadow-2xl border border-yellow-200 w-full max-w-md p-6 z-10 bg-gradient-to-br from-yellow-50 to-white">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-gradient-to-r from-red-500 to-pink-500 rounded-xl p-2">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">Confirm Logout</h3>
+                <p className="text-gray-600 text-sm">Are you sure you want to logout?</p>
+              </div>
+            </div>
+            <div className="flex justify-end space-x-3 mt-6">
               <button
                 onClick={() => setShowLogoutModal(false)}
-                className="px-4 py-2 text-yellow-700 hover:text-yellow-900 bg-yellow-100 hover:bg-yellow-200 rounded-lg transition-colors font-medium"
+                className="px-4 py-2 text-gray-500 hover:text-gray-700 text-base transition"
               >
                 Cancel
               </button>
               <button
                 onClick={handleLogout}
-                className="px-4 py-2 text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors font-medium shadow"
+                className="px-6 py-2 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white rounded-lg shadow-lg font-semibold text-base transition"
               >
                 Logout
               </button>

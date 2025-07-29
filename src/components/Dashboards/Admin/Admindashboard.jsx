@@ -10,6 +10,7 @@ import store2Image from '../../../assets/store2.jpg';
 
 function Admindashboard() {
   const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [selectedStore, setSelectedStore] = useState(null);
   const [notification, setNotification] = useState({ show: false, message: '', type: '' });
   const [employeeData, setEmployeeData] = useState({
@@ -119,6 +120,10 @@ function Admindashboard() {
   };
 
   const handleLogout = async () => {
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogout = async () => {
     try {
       await signOut(auth);
       navigate('/');
@@ -226,7 +231,7 @@ function Admindashboard() {
       {/* Add Employee Modal */}
       {showAddEmployeeModal && (
         // PREMIUM MODAL UPGRADE START
-        <div className="fixed inset-0 flex items-center justify-center z-50 p-4 font-sans" style={{ fontFamily: "'Poppins', 'Inter', 'sans-serif'" }}>
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4 font-sans bg-black/20 backdrop-blur-sm" style={{ fontFamily: "'Poppins', 'Inter', 'sans-serif'" }}>
           <div className="relative bg-white rounded-2xl shadow-2xl border border-yellow-200 w-full max-w-md p-6 z-10 bg-gradient-to-br from-yellow-50 to-white">
             <h3 className="text-2xl font-bold mb-1 text-yellow-600 tracking-tight">Add Employee to {selectedStore?.name}</h3>
             <div className="h-1 w-16 bg-yellow-400 rounded-full mb-4"></div>
@@ -325,6 +330,39 @@ function Admindashboard() {
           </div>
         </div>
         // PREMIUM MODAL UPGRADE END
+      )}
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4 font-sans bg-black/20 backdrop-blur-sm">
+          <div className="relative bg-white rounded-2xl shadow-2xl border border-yellow-200 w-full max-w-md p-6 z-10 bg-gradient-to-br from-yellow-50 to-white">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-gradient-to-r from-red-500 to-pink-500 rounded-xl p-2">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">Confirm Logout</h3>
+                <p className="text-gray-600 text-sm">Are you sure you want to logout?</p>
+              </div>
+            </div>
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                className="px-4 py-2 text-gray-500 hover:text-gray-700 text-base transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmLogout}
+                className="px-6 py-2 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white rounded-lg shadow-lg font-semibold text-base transition"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
         {/* Notification Toast */}

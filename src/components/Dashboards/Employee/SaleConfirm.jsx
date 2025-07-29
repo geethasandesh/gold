@@ -290,101 +290,250 @@ function SaleConfirm() {
   return (
     <>
       <Employeeheader />
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-yellow-50 to-yellow-200 py-8 px-2">
-        {/* Store Indicator */}
-        {selectedStore && (
-          <div className="w-full max-w-lg mb-4">
-            <div className="bg-yellow-100 border border-yellow-300 rounded-lg p-4 text-center">
-              <h3 className="text-lg font-bold text-yellow-800">
-                🏪 Working for: <span className="text-yellow-900">{selectedStore.name}</span>
-              </h3>
-              <p className="text-yellow-700 text-sm mt-1">
-                Sale will be recorded for {selectedStore.name}
-              </p>
+      <div className="min-h-screen bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50">
+        {/* Main Content */}
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          {/* Store Indicator */}
+          {selectedStore && (
+            <div className="mb-4">
+              <div className="bg-gradient-to-r from-yellow-100 to-amber-100 border border-yellow-300 rounded-xl p-3 text-center shadow-lg">
+                <h3 className="text-lg font-bold text-yellow-800">
+                  🏪 Working for: <span className="text-yellow-900">{selectedStore.name}</span>
+                </h3>
+                <p className="text-yellow-700 text-xs mt-1">
+                  Sale will be recorded for {selectedStore.name}
+                </p>
+              </div>
             </div>
-          </div>
-        )}
-        <div className="w-full max-w-lg bg-white/90 rounded-2xl shadow-xl p-8 border border-yellow-100">
-          <h2 className="text-xl font-bold text-yellow-700 mb-4 text-center">Calculation part</h2>
-          <div id="sale-receipt" className="border-2 border-black rounded-lg p-6 mb-6 font-mono">
-            <div className="mb-2"><b>{data.saleType === 'GOLD' ? 'Gold Sale' : 'Silver Sale'}</b></div>
-            <div><b>Name</b>: {data.name}</div>
-            <div><b>Weight</b>: {data.weight} gms</div>
-            <div><b>Rate</b>: {data.rate}</div>
-            <div><b>Amount</b>: {data.amount}</div>
-            <div><b>Mode of payment</b>: {data.mode === 'CASH' ? 'Cash' : 'Online'}</div>
-            <div><b>Payment Source</b>: {selectedSource}</div>
-            <div><b>Employee</b>: {employee}</div>
-          </div>
-          <div className="flex gap-4 mb-4">
-            <button
-              type="button"
-              onClick={() => setSelectedSource(localType)}
-              className={`px-6 py-2 font-semibold shadow rounded-lg ${
-                selectedSource === localType
-                  ? 'bg-sky-400 text-white'
-                  : 'bg-white text-sky-700 border border-sky-400'
-              }`}
-            >
-              {localLabel}
-            </button>
-            <button
-              type="button"
-              onClick={() => setSelectedSource(bankType)}
-              className={`px-6 py-2 font-semibold shadow rounded-lg ${
-                selectedSource === bankType
-                  ? 'bg-yellow-300 text-black'
-                  : 'bg-white text-yellow-700 border border-yellow-400'
-              }`}
-            >
-              {bankLabel}
-            </button>
-          </div>
-          <div className="mb-4 flex gap-12">
-            {/* Local gold/silver */}
-            <div>
-              <div className="mb-2 font-bold">{localLabel}</div>
-              <div className="mb-2">Available: <input value={localAvailable} readOnly className="border px-2 py-1 rounded w-24 text-center" /></div>
-              <div className="mb-2">Currently paying: <input value={data.weight} readOnly className="border px-2 py-1 rounded w-24 text-center" /></div>
-              <div className="mb-2">Remaining: <input value={localRemaining} readOnly className="border px-2 py-1 rounded w-24 text-center" /></div>
+          )}
+
+          {/* Sale Confirmation Card */}
+          <div className="bg-white rounded-2xl shadow-xl p-6 border border-yellow-100">
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-6">
+              <div className="bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl p-2">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Sale Confirmation</h2>
+                <p className="text-gray-600 text-sm">
+                  Review and confirm the sale details
+                </p>
+              </div>
             </div>
-            {/* Bank gold/silver */}
-            <div>
-              <div className="mb-2 font-bold">{bankLabel}</div>
-              <div className="mb-2">Available: <input value={bankAvailable} readOnly className="border px-2 py-1 rounded w-24 text-center" /></div>
-              <div className="mb-2">Currently paying: <input value={data.weight} readOnly className="border px-2 py-1 rounded w-24 text-center" /></div>
-              <div className="mb-2">Remaining: <input value={bankRemaining} readOnly className="border px-2 py-1 rounded w-24 text-center" /></div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Left Column - Sale Details */}
+              <div className="space-y-4">
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 border border-green-200">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-3">Sale Details</h3>
+                  <div id="sale-receipt" className="font-mono text-sm space-y-2">
+                    <div className="mb-3 p-3 bg-white rounded-lg border border-green-200">
+                      <div className="font-bold text-green-700 mb-2">
+                        {data.saleType === 'GOLD' ? '🥇 Gold Sale' : '🥈 Silver Sale'}
+                      </div>
+                      <div className="space-y-1">
+                        <div><b>Name</b>: {data.name}</div>
+                        <div><b>Weight</b>: {data.weight} gms</div>
+                        <div><b>Rate</b>: ₹{data.rate}</div>
+                        <div><b>Amount</b>: ₹{data.amount}</div>
+                        <div><b>Mode of payment</b>: {data.mode === 'CASH' ? '💵 Cash' : '💳 Online'}</div>
+                        <div><b>Payment Source</b>: {selectedSource}</div>
+                        <div><b>Employee</b>: {employee}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payment Source Selection */}
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-3">Payment Source</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedSource(localType)}
+                      className={`relative p-3 rounded-xl border-2 transition-all duration-200 ${
+                        selectedSource === localType
+                          ? 'border-blue-500 bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg'
+                          : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50 text-gray-700'
+                      } hover:shadow-md`}
+                    >
+                      <div className="text-center">
+                        <div className="text-lg mb-1">🏪</div>
+                        <div className="font-semibold text-sm">{localLabel}</div>
+                        <div className="text-xs opacity-75">{localType}</div>
+                      </div>
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => setSelectedSource(bankType)}
+                      className={`relative p-3 rounded-xl border-2 transition-all duration-200 ${
+                        selectedSource === bankType
+                          ? 'border-yellow-500 bg-gradient-to-r from-yellow-500 to-amber-500 text-white shadow-lg'
+                          : 'border-gray-200 bg-white hover:border-yellow-300 hover:bg-yellow-50 text-gray-700'
+                      } hover:shadow-md`}
+                    >
+                      <div className="text-center">
+                        <div className="text-lg mb-1">🏦</div>
+                        <div className="font-semibold text-sm">{bankLabel}</div>
+                        <div className="text-xs opacity-75">{bankType}</div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column - Stock Availability */}
+              <div className="space-y-4">
+                <div className="bg-gradient-to-r from-yellow-50 to-amber-50 rounded-xl p-4 border border-yellow-200">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-3">Stock Availability</h3>
+                  
+                  {/* Local Stock */}
+                  <div className="mb-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg">🏪</span>
+                      <span className="font-semibold text-gray-700">{localLabel}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-sm">
+                      <div className="bg-white rounded-lg p-2 border border-yellow-200">
+                        <div className="text-xs text-gray-500">Available</div>
+                        <div className="font-bold text-blue-600">{localAvailable.toLocaleString()}g</div>
+                      </div>
+                      <div className="bg-white rounded-lg p-2 border border-yellow-200">
+                        <div className="text-xs text-gray-500">Selling</div>
+                        <div className="font-bold text-red-600">{data.weight}g</div>
+                      </div>
+                      <div className="bg-white rounded-lg p-2 border border-yellow-200">
+                        <div className="text-xs text-gray-500">Remaining</div>
+                        <div className={`font-bold ${localRemaining >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {localRemaining.toLocaleString()}g
+                        </div>
+                      </div>
+                    </div>
+                    {selectedSource === localType && localRemaining < 0 && (
+                      <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded-lg">
+                        <div className="text-red-700 text-sm font-semibold flex items-center gap-1">
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                          Insufficient stock in {localType}!
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Bank Stock */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg">🏦</span>
+                      <span className="font-semibold text-gray-700">{bankLabel}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-sm">
+                      <div className="bg-white rounded-lg p-2 border border-yellow-200">
+                        <div className="text-xs text-gray-500">Available</div>
+                        <div className="font-bold text-blue-600">{bankAvailable.toLocaleString()}g</div>
+                      </div>
+                      <div className="bg-white rounded-lg p-2 border border-yellow-200">
+                        <div className="text-xs text-gray-500">Selling</div>
+                        <div className="font-bold text-red-600">{data.weight}g</div>
+                      </div>
+                      <div className="bg-white rounded-lg p-2 border border-yellow-200">
+                        <div className="text-xs text-gray-500">Remaining</div>
+                        <div className={`font-bold ${bankRemaining >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {bankRemaining.toLocaleString()}g
+                        </div>
+                      </div>
+                    </div>
+                    {selectedSource === bankType && bankRemaining < 0 && (
+                      <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded-lg">
+                        <div className="text-red-700 text-sm font-semibold flex items-center gap-1">
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                          Insufficient stock in {bankType}!
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={handleApprove}
+                      disabled={loading || insufficient}
+                      className={`px-6 py-3 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none ${
+                        loading || insufficient
+                          ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                          : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white'
+                      }`}
+                    >
+                      {loading ? (
+                        <>
+                          <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Approve Sale
+                        </>
+                      )}
+                    </button>
+                    
+                    <button
+                      onClick={handleDeny}
+                      disabled={loading || insufficient}
+                      className="px-6 py-3 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                      Deny Sale
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="flex gap-4 justify-center mt-6">
-            <button
-              onClick={handleApprove}
-              disabled={loading || insufficient}
-              className={`px-6 py-2 rounded-lg font-semibold shadow text-white ${
-                insufficient ? 'bg-green-300 opacity-60 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'
-              }`}
-            >
-              Approve
-            </button>
-            <button
-              onClick={handleDeny}
-              disabled={loading || insufficient}
-              className={`px-6 py-2 rounded-lg font-semibold shadow text-white ${
-                insufficient ? 'bg-red-300 opacity-60 cursor-not-allowed' : 'bg-red-500 hover:bg-red-600'
-              }`}
-            >
-              Deny
-            </button>
           </div>
         </div>
+
+        {/* Toast Notification */}
         {toast.show && (
-          <div className={`fixed top-6 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-xl shadow-lg z-[9999] flex items-center gap-2 text-white ${
-            toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
-          }`}>
+          <div className={`fixed top-6 left-1/2 transform -translate-x-1/2 px-8 py-4 rounded-2xl shadow-2xl z-[9999] flex items-center gap-3 text-white text-lg font-semibold ${toast.type === 'success' ? 'bg-gradient-to-r from-green-500 to-emerald-600' : 'bg-gradient-to-r from-red-500 to-pink-600'} animate-fade-in`}>
+            {toast.type === 'success' ? (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            ) : (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            )}
             <span>{toast.message}</span>
           </div>
         )}
       </div>
+      
+      {/* Animations */}
+      <style>{`
+        @keyframes fade-in {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+          animation: fade-in 0.25s ease;
+        }
+      `}</style>
     </>
   );
 }
