@@ -223,27 +223,7 @@ function Goldreservers() {
               </button>
             </div>
             {/* Recent History */}
-            <div className="mb-2">
-              <div className="font-semibold text-yellow-700 mb-2 flex items-center gap-2">
-                Recent Changes
-                <FaInfoCircle className="w-4 h-4 text-yellow-400" title="Shows the last 5 changes for this reserve type and store." />
-              </div>
-              <div className="bg-yellow-50 rounded-xl p-3 max-h-40 overflow-y-auto shadow-inner">
-                {history.length === 0 ? (
-                  <div className="text-gray-400 text-sm">No recent changes.</div>
-                ) : (
-                  <ul className="text-sm">
-                    {history.map((h, i) => (
-                      <li key={i} className="flex justify-between py-1 border-b border-yellow-100 last:border-b-0">
-                        <span>{h.addedingms > 0 ? `+${h.addedingms}` : h.addedingms}g</span>
-                        <span>{h.totalingms}g</span>
-                        <span className="text-gray-500">{h.createdAt && h.createdAt.toDate ? h.createdAt.toDate().toLocaleString() : ''}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
+            
           </div>
         </div>
         {toast.show && (

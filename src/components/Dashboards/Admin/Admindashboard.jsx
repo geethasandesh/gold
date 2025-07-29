@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
-import { createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signOut, getAuth } from 'firebase/auth';
+import { initializeApp } from 'firebase/app';
 import { db, auth } from '../../../firebase';
 import { useStore } from './StoreContext';
 import { useNavigate } from 'react-router-dom';
@@ -45,6 +46,7 @@ function Admindashboard() {
       return;
     }
     setLoading(true);
+    
     try {
       const emailQuery = query(collection(db, 'users'), where('email', '==', employeeData.email));
       const emailSnapshot = await getDocs(emailQuery);
@@ -62,8 +64,23 @@ function Admindashboard() {
         return;
       }
 
+      // Create a secondary Firebase app instance for creating the employee
+      // This prevents the admin from being signed out
+      const firebaseConfig = {
+        apiKey: "AIzaSyCis5yYuh-rFvEcBbMDcqoM0eksSaCagvc",
+        authDomain: "gold-18ea4.firebaseapp.com",
+        projectId: "gold-18ea4",
+        storageBucket: "gold-18ea4.firebasestorage.app",
+        messagingSenderId: "802568938489",
+        appId: "1:802568938489:web:0a5d98272ac04921ac9328",
+        measurementId: "G-GRTH07VG3Z"
+      };
+      
+      const secondaryApp = initializeApp(firebaseConfig, 'secondary');
+      const secondaryAuth = getAuth(secondaryApp);
+
       const userCredential = await createUserWithEmailAndPassword(
-        auth,
+        secondaryAuth,
         employeeData.email,
         employeeData.password
       );
@@ -79,6 +96,9 @@ function Admindashboard() {
         uid: userCredential.user.uid
       });
 
+      // Sign out from the secondary app
+      await signOut(secondaryAuth);
+
       setEmployeeData({
         name: '',
         mobile: '',
@@ -89,6 +109,7 @@ function Admindashboard() {
       });
       setShowAddEmployeeModal(false);
       showNotification('Employee added successfully', 'success');
+      
     } catch (error) {
       console.error('Error adding employee:', error);
       showNotification(error.message, 'error');
