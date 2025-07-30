@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import Adminheader from './Adminheader'
 import { Link, useNavigate } from 'react-router-dom'
-import { FaCoins, FaGem, FaFileAlt, FaChartBar, FaUsers, FaCog, FaDatabase, FaBell, FaExclamationTriangle, FaArrowLeft } from 'react-icons/fa'
+import { FaCoins, FaGem, FaFileAlt, FaChartBar, FaUsers, FaCog, FaDatabase, FaArrowLeft, FaExchangeAlt, FaShoppingCart, FaDollarSign } from 'react-icons/fa'
 import { GiJewelCrown } from 'react-icons/gi'
-import { collection, getDocs } from 'firebase/firestore'
+import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore'
 import { db } from '../../../firebase'
  
 const QUICK_ACTIONS = [
@@ -47,38 +47,7 @@ const QUICK_ACTIONS = [
  
  
  
-const ALERTS = [
-  {
-    type: 'warning',
-    title: 'Low Gold Reserve',
-    message: 'Gold reserves are below minimum threshold',
-    time: '2 min ago',
-    icon: <FaExclamationTriangle className="w-4 h-4" />,
-    bgColor: 'bg-yellow-50',
-    borderColor: 'border-yellow-200',
-    textColor: 'text-yellow-800'
-  },
-  {
-    type: 'info',
-    title: 'System Update',
-    message: 'Scheduled maintenance tonight at 2:00 AM',
-    time: '1 hour ago',
-    icon: <FaBell className="w-4 h-4" />,
-    bgColor: 'bg-blue-50',
-    borderColor: 'border-blue-200',
-    textColor: 'text-blue-800'
-  },
-  {
-    type: 'success',
-    title: 'Backup Complete',
-    message: 'Daily backup completed successfully',
-    time: '3 hours ago',
-    icon: <FaDatabase className="w-4 h-4" />,
-    bgColor: 'bg-green-50',
-    borderColor: 'border-green-200',
-    textColor: 'text-green-800'
-  },
-]
+
  
 function AdminMainDashboard() {
   const navigate = useNavigate();
@@ -88,9 +57,12 @@ function AdminMainDashboard() {
     silverReserves: { value: 0, change: 0, loading: true }
   })
   const [debugInfo, setDebugInfo] = useState('')
+  const [recentActivities, setRecentActivities] = useState([])
+  const [activitiesLoading, setActivitiesLoading] = useState(true)
  
   useEffect(() => {
     fetchStats()
+    fetchRecentActivities()
   }, [])
  
   const fetchStats = async () => {
@@ -194,10 +166,118 @@ function AdminMainDashboard() {
   const formatWeight = (weight) => {
     return weight.toFixed(1) + 'kg'
   }
+
+  const formatTimeAgo = (date) => {
+    const now = new Date()
+    const diffInSeconds = Math.floor((now - date) / 1000)
+    
+    if (diffInSeconds < 60) {
+      return `${diffInSeconds} sec ago`
+    } else if (diffInSeconds < 3600) {
+      const minutes = Math.floor(diffInSeconds / 60)
+      return `${minutes} min ago`
+    } else if (diffInSeconds < 86400) {
+      const hours = Math.floor(diffInSeconds / 3600)
+      return `${hours} hour${hours > 1 ? 's' : ''} ago`
+    } else {
+      const days = Math.floor(diffInSeconds / 86400)
+      return `${days} day${days > 1 ? 's' : ''} ago`
+    }
+  }
  
+  const fetchRecentActivities = async () => {
+    try {
+      setActivitiesLoading(true)
+      const activities = []
+
+      // Fetch recent exchanges
+      try {
+        const exchangesQuery = query(
+          collection(db, 'exchanges'),
+          orderBy('createdAt', 'desc'),
+          limit(3)
+        )
+        const exchangesSnapshot = await getDocs(exchangesQuery)
+        exchangesSnapshot.docs.forEach(doc => {
+          const data = doc.data()
+          activities.push({
+            id: doc.id,
+            type: 'exchange',
+            title: `${data.type} Exchange`,
+            description: `${data.fine}g fine, ${data.amount || 'N/A'} amount`,
+            time: data.createdAt?.toDate?.() || new Date(),
+            icon: <FaExchangeAlt className="w-4 h-4" />,
+            color: 'bg-blue-500'
+          })
+        })
+      } catch (error) {
+        console.log('Error fetching exchanges:', error)
+      }
+
+      // Fetch recent purchases
+      try {
+        const purchasesQuery = query(
+          collection(db, 'purchases'),
+          orderBy('createdAt', 'desc'),
+          limit(3)
+        )
+        const purchasesSnapshot = await getDocs(purchasesQuery)
+        purchasesSnapshot.docs.forEach(doc => {
+          const data = doc.data()
+          activities.push({
+            id: doc.id,
+            type: 'purchase',
+            title: `${data.purchaseType || 'Purchase'}`,
+            description: `${data.subType || 'N/A'}, ${data.amount || 'N/A'} amount`,
+            time: data.createdAt?.toDate?.() || new Date(),
+            icon: <FaShoppingCart className="w-4 h-4" />,
+            color: 'bg-green-500'
+          })
+        })
+      } catch (error) {
+        console.log('Error fetching purchases:', error)
+      }
+
+      // Fetch recent sales
+      try {
+        const salesQuery = query(
+          collection(db, 'sales'),
+          orderBy('createdAt', 'desc'),
+          limit(3)
+        )
+        const salesSnapshot = await getDocs(salesQuery)
+        salesSnapshot.docs.forEach(doc => {
+          const data = doc.data()
+          activities.push({
+            id: doc.id,
+            type: 'sale',
+            title: `${data.saleType} Sale`,
+            description: `${data.paymentMode || 'N/A'}, ${data.amount || 'N/A'} amount`,
+            time: data.createdAt?.toDate?.() || new Date(),
+            icon: <FaDollarSign className="w-4 h-4" />,
+            color: 'bg-yellow-500'
+          })
+        })
+      } catch (error) {
+        console.log('Error fetching sales:', error)
+      }
+
+      // Sort all activities by time (most recent first)
+      activities.sort((a, b) => b.time - a.time)
+
+      // Take only the 3 most recent activities
+      setRecentActivities(activities.slice(0, 3))
+    } catch (error) {
+      console.error('Error fetching recent activities:', error)
+    } finally {
+      setActivitiesLoading(false)
+    }
+  }
+
   const refreshData = async () => {
     setDebugInfo('Refreshing data...')
     await fetchStats()
+    await fetchRecentActivities()
   }
  
   const STATS_CARDS = [
@@ -348,79 +428,56 @@ function AdminMainDashboard() {
             </div>
           </div>
  
-          {/* Alerts & Notifications - Takes 1 column */}
+          {/* Recent Activity - Takes 1 column */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-2xl shadow-xl p-6 border-2 border-yellow-200">
+            <div className="bg-white rounded-2xl shadow-xl p-8 border-2 border-yellow-200">
               <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-gradient-to-r from-red-400 to-red-500 rounded-lg">
-                  <FaBell className="w-5 h-5 text-white" />
+                <div className="p-2 bg-gradient-to-r from-blue-400 to-blue-500 rounded-lg">
+                  <FaDatabase className="w-5 h-5 text-white" />
                 </div>
-                <h2 className="text-xl font-bold text-gray-800">System Alerts</h2>
+                <h2 className="text-2xl font-bold text-gray-800">Recent Activity</h2>
               </div>
               <div className="space-y-4">
-                {ALERTS.map((alert, index) => (
-                  <div
-                    key={index}
-                    className={`${alert.bgColor} ${alert.borderColor} border-2 rounded-xl p-4 transition-all duration-200 hover:shadow-md`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className={`p-2 bg-white rounded-lg ${alert.textColor}`}>
-                        {alert.icon}
-                      </div>
+                {activitiesLoading ? (
+                  // Loading skeleton
+                  Array.from({ length: 3 }).map((_, index) => (
+                    <div key={index} className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-200 animate-pulse">
+                      <div className="w-3 h-3 bg-gray-300 rounded-full flex-shrink-0"></div>
                       <div className="flex-1 min-w-0">
-                        <h4 className={`font-semibold ${alert.textColor} mb-1`}>
-                          {alert.title}
-                        </h4>
-                        <p className="text-sm text-gray-600 mb-2">
-                          {alert.message}
-                        </p>
+                        <div className="h-4 bg-gray-300 rounded mb-2"></div>
+                        <div className="h-3 bg-gray-200 rounded mb-1"></div>
+                        <div className="h-3 bg-gray-200 rounded w-20"></div>
+                      </div>
+                    </div>
+                  ))
+                ) : recentActivities.length > 0 ? (
+                  // Real activities
+                  recentActivities.map((activity) => (
+                    <div key={activity.id} className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-200 hover:shadow-md transition-shadow">
+                      <div className={`w-3 h-3 ${activity.color} rounded-full animate-pulse flex-shrink-0`}></div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-800 truncate">{activity.title}</p>
+                        <p className="text-sm text-gray-600 truncate">{activity.description}</p>
                         <span className="text-xs text-gray-500">
-                          {alert.time}
+                          {formatTimeAgo(activity.time)}
                         </span>
                       </div>
                     </div>
+                  ))
+                ) : (
+                  // No activities
+                  <div className="text-center py-8">
+                    <FaDatabase className="w-8 h-8 text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-500 text-sm">No recent activities</p>
                   </div>
-                ))}
+                )}
               </div>
             </div>
           </div>
         </div>
  
         {/* Recent Activity */}
-        <div className="mt-8 bg-white rounded-2xl shadow-xl p-8 border-2 border-yellow-200">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-gradient-to-r from-blue-400 to-blue-500 rounded-lg">
-              <FaDatabase className="w-5 h-5 text-white" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-800">Recent Activity</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-200 hover:shadow-md transition-shadow">
-              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse flex-shrink-0"></div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-gray-800 truncate">New user registration</p>
-                <p className="text-sm text-gray-600 truncate">john.doe@example.com</p>
-                <span className="text-xs text-gray-500">2 min ago</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-200 hover:shadow-md transition-shadow">
-              <div className="w-3 h-3 bg-yellow-500 rounded-full animate-pulse flex-shrink-0"></div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-gray-800 truncate">Gold reserve updated</p>
-                <p className="text-sm text-gray-600 truncate">Added 2.5kg to reserves</p>
-                <span className="text-xs text-gray-500">15 min ago</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-200 hover:shadow-md transition-shadow">
-              <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse flex-shrink-0"></div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-gray-800 truncate">System backup completed</p>
-                <p className="text-sm text-gray-600 truncate">Daily backup finished</p>
-                <span className="text-xs text-gray-500">1 hour ago</span>
-              </div>
-            </div>
-          </div>
-        </div>
+       
       </div>
     </div>
   )

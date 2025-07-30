@@ -67,8 +67,8 @@ function Admintokens() {
     const printContents = document.getElementById('token-preview').innerHTML;
     const win = window.open('', '', 'height=600,width=500');
     win.document.write('<html><head><title>Token</title>');
-    win.document.write('<style>body{font-family:monospace;} .border-black{border:2px solid #000;padding:24px;width:400px;margin:auto;}</style>');
-    win.document.write('</head><body >');
+    win.document.write('<style>body{font-family:monospace;margin:0;padding:0;} .border-black{border:2px solid #000;padding:16px;width:380px;margin:0;line-height:1.2;} .border-black div{margin:0;padding:0;} .border-black .mb-2{margin-bottom:8px;} .border-black .mb-1{margin-bottom:4px;} .border-black .mt-2{margin-top:8px;} .border-black .mt-4{margin-top:16px;}</style>');
+    win.document.write('</head><body>');
     win.document.write(printContents);
     win.document.write('</body></html>');
     win.document.close();
@@ -249,7 +249,7 @@ function Admintokens() {
                     <div id="token-preview" className="border-2 border-black p-8 w-[380px] bg-white relative rounded-2xl shadow-2xl transform rotate-1 hover:rotate-0 transition-transform duration-300" style={{fontFamily: 'monospace'}}>
                 <div className="text-center font-bold text-lg mb-2 text-yellow-800">SRI GAYATRI ASSAYING CENTRE</div>
                 <div className="mt-2 text-yellow-700 font-semibold">DETAILS:</div>
-                <div className="mt-2 mb-2 text-gray-400">---------------------------------------------------------------------</div>
+                
                 <div className="flex justify-between mb-2 text-base">
                   <span className="font-semibold">TOKEN NO : {preview.tokenNo}</span>
                   <span className="font-semibold">DATE: {preview.date}</span>
