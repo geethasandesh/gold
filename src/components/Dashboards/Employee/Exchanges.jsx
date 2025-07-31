@@ -193,7 +193,6 @@ function Exchanges() {
               />
             </div>
                 </div>
-
                 <div className="space-y-3">
                   <label className="block text-lg font-semibold text-gray-800 mb-3">
                     Weight (grams)
@@ -217,7 +216,6 @@ function Exchanges() {
             </div>
                 </div>
               </div>
-
               {/* Quality Details */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-3">
@@ -244,7 +242,6 @@ function Exchanges() {
               />
             </div>
                 </div>
-
                 <div className="space-y-3">
                   <label className="block text-lg font-semibold text-gray-800 mb-3">
                     Less

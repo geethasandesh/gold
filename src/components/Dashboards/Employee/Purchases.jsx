@@ -35,8 +35,7 @@ function Purchases() {
   const [lessAuto, setLessAuto] = useState('');
   const [fineAuto, setFineAuto] = useState('');
   const [amount, setAmount] = useState('');
-  const [paymentType, setPaymentType] = useState('CASH');
-  const [cashMode, setCashMode] = useState('PHYSICAL');
+  const [paymentType, setPaymentType] = useState('ACCOUNTS');
   const navigate = useNavigate();
   
   const { selectedStore } = useStore();
@@ -90,7 +89,6 @@ function Purchases() {
         fine: fineAuto,
         amount,
         paymentType,
-        cashMode,
         storeId: selectedStore?.id,
         storeName: selectedStore?.name,
       },
@@ -370,22 +368,7 @@ function Purchases() {
               {/* Payment Options */}
               <div className="space-y-3">
                 <h3 className="text-sm font-semibold text-gray-800">Payment Method</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    className={`relative p-3 rounded-xl border-2 transition-all duration-200 ${
-                      paymentType === 'CASH'
-                        ? 'border-blue-500 bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg'
-                        : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50 text-gray-700'
-                    } hover:shadow-md`}
-                    onClick={() => setPaymentType('CASH')}
-                  >
-                    <div className="text-center">
-                      <div className="text-lg mb-1">💵</div>
-                      <div className="font-semibold text-sm">Pay from available cash</div>
-                    </div>
-                  </button>
-                  
+                <div className="grid grid-cols-1 gap-3">
                   <button
                     type="button"
                     className={`relative p-3 rounded-xl border-2 transition-all duration-200 ${
@@ -397,40 +380,18 @@ function Purchases() {
                   >
                     <div className="text-center">
                       <div className="text-lg mb-1">🏦</div>
-                      <div className="font-semibold text-sm">Pay from out of accounts</div>
+                      <div className="font-semibold text-sm">
+                        {mainType === 'GOLD' 
+                          ? 'Pay from available gold amount' 
+                          : 'Pay from available silver amount'
+                        }
+                      </div>
                     </div>
                   </button>
                 </div>
               </div>
 
-              {/* Cash Mode Toggle */}
-              {paymentType === 'CASH' && (
-                <div className="space-y-2">
-                  <h3 className="text-sm font-semibold text-gray-800">Cash Mode</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    {[
-                      { value: 'PHYSICAL', label: 'Physical Mode', icon: '🏪' },
-                      { value: 'ONLINE', label: 'Online Mode', icon: '💳' }
-                    ].map((option) => (
-                      <button
-                        key={option.value}
-                        type="button"
-                        className={`relative p-3 rounded-xl border-2 transition-all duration-200 ${
-                          cashMode === option.value
-                            ? 'border-indigo-500 bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-lg'
-                            : 'border-gray-200 bg-white hover:border-indigo-300 hover:bg-indigo-50 text-gray-700'
-                        } hover:shadow-md`}
-                        onClick={() => setCashMode(option.value)}
-                      >
-                        <div className="text-center">
-                          <div className="text-lg mb-1">{option.icon}</div>
-                          <div className="font-semibold text-sm">{option.label}</div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+
 
               {/* Continue Button */}
               <div className="flex justify-center pt-4">

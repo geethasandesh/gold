@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import Employeeheader from './Employeeheader'
 import { Link } from 'react-router-dom'
-import { FaCoins, FaExchangeAlt, FaShoppingCart, FaClipboardList, FaChartLine, FaFileAlt, FaGem, FaWeight, FaCertificate, FaEdit, FaSave, FaTimes, FaClock, FaCalendarAlt } from 'react-icons/fa'
-import { GiGoldBar, GiDiamondRing, GiJewelCrown, GiGoldNuggets, GiCrystalBall, GiTreasureMap } from 'react-icons/gi'
+import { FaCoins, FaExchangeAlt, FaShoppingCart, FaClipboardList, FaChartLine, FaFileAlt, FaEdit, FaSave, FaTimes, FaClock, FaCalendarAlt } from 'react-icons/fa'
+import { GiGoldBar, GiJewelCrown, GiGoldNuggets } from 'react-icons/gi'
+import { db } from '../../../firebase'
+import { collection, getDocs, query, where } from 'firebase/firestore'
+import { useStore } from '../Admin/StoreContext'
  
 const QUICK_ACTIONS = [
   {
@@ -76,6 +79,14 @@ function Employeedashboard() {
  
   // Current time state
   const [currentTime, setCurrentTime] = useState(new Date());
+
+  // State for totals
+  const [localGoldTotal, setLocalGoldTotal] = useState(0);
+  const [bankGoldTotal, setBankGoldTotal] = useState(0);
+  const [localSilverTotal, setLocalSilverTotal] = useState(0);
+  const [bankSilverTotal, setBankSilverTotal] = useState(0);
+
+  const { selectedStore } = useStore();
  
   // Update time every second
   useEffect(() => {
@@ -105,6 +116,64 @@ function Employeedashboard() {
     localStorage.setItem('goldChange', goldChange.toString());
     localStorage.setItem('silverChange', silverChange.toString());
   }, [goldRate, silverRate, goldChange, silverChange]);
+
+  // Fetch totals from database
+  const fetchTotals = async () => {
+    if (!selectedStore) return;
+    
+    try {
+      // Fetch Gold Totals
+      const goldQuery = query(
+        collection(db, 'goldreserves'),
+        where('storeId', '==', selectedStore.id)
+      );
+      const goldSnapshot = await getDocs(goldQuery);
+      
+      let localGold = 0;
+      let bankGold = 0;
+      
+      goldSnapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.type === 'LOCAL GOLD' && data.totalingms) {
+          localGold = data.totalingms;
+        } else if (data.type === 'BANK GOLD' && data.totalingms) {
+          bankGold = data.totalingms;
+        }
+      });
+      
+      setLocalGoldTotal(localGold);
+      setBankGoldTotal(bankGold);
+      
+      // Fetch Silver Totals
+      const silverQuery = query(
+        collection(db, 'silverreserves'),
+        where('storeId', '==', selectedStore.id)
+      );
+      const silverSnapshot = await getDocs(silverQuery);
+      
+      let localSilver = 0;
+      let bankSilver = 0;
+      
+      silverSnapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.type === 'LOCAL SILVER' && data.totalingms) {
+          localSilver = data.totalingms;
+        } else if (data.type === 'KAMAL SILVER' && data.totalingms) {
+          bankSilver = data.totalingms;
+        }
+      });
+      
+      setLocalSilverTotal(localSilver);
+      setBankSilverTotal(bankSilver);
+    } catch (error) {
+      console.error('Error fetching totals:', error);
+    }
+  };
+
+  // Fetch totals when store changes
+  useEffect(() => {
+    fetchTotals();
+  }, [selectedStore]);
  
   // Handle opening edit modal
   const handleEditRate = (type) => {
@@ -239,6 +308,58 @@ function Employeedashboard() {
             </div>
           </div>
         </div>
+
+        {/* Store Totals Section */}
+        {selectedStore && (
+          <div className="mb-10">
+            <div className="flex items-center gap-3 mb-6">
+              <GiGoldBar className="w-8 h-8 text-yellow-600" />
+              <h2 className="text-2xl font-bold text-yellow-700">Store Inventory Totals</h2>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Local Gold */}
+              <div className="bg-gradient-to-br from-yellow-400 to-amber-500 rounded-xl p-4 text-white shadow-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">Local Gold</span>
+                  <GiGoldBar className="w-6 h-6 text-yellow-200" />
+                </div>
+                <div className="text-2xl font-bold">{localGoldTotal.toLocaleString()}g</div>
+                <div className="text-xs text-yellow-200 mt-1">Available Stock</div>
+              </div>
+
+              {/* Bank Gold */}
+              <div className="bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl p-4 text-white shadow-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">Bank Gold</span>
+                  <GiGoldBar className="w-6 h-6 text-amber-200" />
+                </div>
+                <div className="text-2xl font-bold">{bankGoldTotal.toLocaleString()}g</div>
+                <div className="text-xs text-amber-200 mt-1">Available Stock</div>
+              </div>
+
+              {/* Local Silver */}
+              <div className="bg-gradient-to-br from-gray-400 to-slate-500 rounded-xl p-4 text-white shadow-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">Local Silver</span>
+                  <GiGoldNuggets className="w-6 h-6 text-gray-200" />
+                </div>
+                <div className="text-2xl font-bold">{localSilverTotal.toLocaleString()}g</div>
+                <div className="text-xs text-gray-200 mt-1">Available Stock</div>
+              </div>
+
+              {/* Bank Silver */}
+              <div className="bg-gradient-to-br from-slate-500 to-gray-600 rounded-xl p-4 text-white shadow-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">Bank Silver</span>
+                  <GiGoldNuggets className="w-6 h-6 text-slate-200" />
+                </div>
+                <div className="text-2xl font-bold">{bankSilverTotal.toLocaleString()}g</div>
+                <div className="text-xs text-slate-200 mt-1">Available Stock</div>
+              </div>
+            </div>
+          </div>
+        )}
  
         {/* Quick Actions Grid */}
         <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl p-8 mb-10 border border-yellow-200">

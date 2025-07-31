@@ -14,6 +14,11 @@ function Adminfile() {
   const [activeTab, setActiveTab] = useState('overview');
   const [tokenDetails, setTokenDetails] = useState([]);
   const [salesDetails, setSalesDetails] = useState([]);
+  const [goldSalesDetails, setGoldSalesDetails] = useState([]);
+  const [silverSalesDetails, setSilverSalesDetails] = useState([]);
+  const [goldSalesAmount, setGoldSalesAmount] = useState(0);
+  const [silverSalesAmount, setSilverSalesAmount] = useState(0);
+  const [salesTab, setSalesTab] = useState('all'); // 'all', 'gold', 'silver'
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   
   const { selectedStore } = useStore();
@@ -80,12 +85,22 @@ function Adminfile() {
       );
       const salesSnapshot = await getDocs(salesQuery);
       let salesTotal = 0;
+      let goldTotal = 0;
+      let silverTotal = 0;
       const salesData = [];
+      const goldData = [];
+      const silverData = [];
+      
       salesSnapshot.forEach(docSnap => {
         const d = docSnap.data();
         const amount = parseFloat(d.amount) || 0;
-        salesTotal += amount;
-        salesData.push({
+        
+        // Skip deduction records (negative amounts from purchases)
+        if (d.isDeduction) {
+          return;
+        }
+        
+        const saleRecord = {
           id: docSnap.id,
           name: d.name,
           weight: d.weight,
@@ -94,10 +109,26 @@ function Adminfile() {
           date: d.date,
           saleType: d.saleType,
           source: d.source
-        });
+        };
+        
+        salesTotal += amount;
+        salesData.push(saleRecord);
+        
+        if (d.saleType === 'GOLD') {
+          goldTotal += amount;
+          goldData.push(saleRecord);
+        } else if (d.saleType === 'SILVER') {
+          silverTotal += amount;
+          silverData.push(saleRecord);
+        }
       });
+      
       setSalesAmount(salesTotal);
       setSalesDetails(salesData);
+      setGoldSalesAmount(goldTotal);
+      setSilverSalesAmount(silverTotal);
+      setGoldSalesDetails(goldData);
+      setSilverSalesDetails(silverData);
       
       // Calculate total
       const total = parseFloat(ledgerVal || 0) + parseFloat(onlineVal || 0) + tokenTotal + salesTotal;
@@ -264,10 +295,59 @@ function Adminfile() {
           {/* Sales Tab */}
           {activeTab === 'sales' && (
             <div className="space-y-4">
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                <h3 className="font-bold text-blue-800 mb-2">Sales Revenue Summary</h3>
-                <div className="text-xl font-bold text-blue-900">₹{salesAmount}</div>
-                <p className="text-sm text-blue-700">Total from {salesDetails.length} sales</p>
+              {/* Sales Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h3 className="font-bold text-blue-800 mb-2">Total Sales</h3>
+                  <div className="text-xl font-bold text-blue-900">₹{salesAmount}</div>
+                  <p className="text-sm text-blue-700">From {salesDetails.length} sales</p>
+                </div>
+                
+                <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                  <h3 className="font-bold text-yellow-800 mb-2">Gold Sales</h3>
+                  <div className="text-xl font-bold text-yellow-900">₹{goldSalesAmount}</div>
+                  <p className="text-sm text-yellow-700">From {goldSalesDetails.length} sales</p>
+                </div>
+                
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                  <h3 className="font-bold text-gray-800 mb-2">Silver Sales</h3>
+                  <div className="text-xl font-bold text-gray-900">₹{silverSalesAmount}</div>
+                  <p className="text-sm text-gray-700">From {silverSalesDetails.length} sales</p>
+                </div>
+              </div>
+
+              {/* Sales Type Tabs */}
+              <div className="flex gap-2 mb-4">
+                <button
+                  onClick={() => setSalesTab('all')}
+                  className={`px-4 py-2 rounded-lg font-semibold ${
+                    salesTab === 'all'
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  All Sales
+                </button>
+                <button
+                  onClick={() => setSalesTab('gold')}
+                  className={`px-4 py-2 rounded-lg font-semibold ${
+                    salesTab === 'gold'
+                      ? 'bg-yellow-500 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Gold Sales
+                </button>
+                <button
+                  onClick={() => setSalesTab('silver')}
+                  className={`px-4 py-2 rounded-lg font-semibold ${
+                    salesTab === 'silver'
+                      ? 'bg-gray-500 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Silver Sales
+                </button>
               </div>
               
               <div className="max-h-96 overflow-y-auto">
@@ -284,7 +364,29 @@ function Adminfile() {
                     </tr>
                   </thead>
                   <tbody>
-                    {salesDetails.map((sale) => (
+                    {salesTab === 'all' && salesDetails.map((sale) => (
+                      <tr key={sale.id} className="hover:bg-gray-50">
+                        <td className="border border-gray-300 px-3 py-2">{sale.name}</td>
+                        <td className="border border-gray-300 px-3 py-2">{sale.saleType}</td>
+                        <td className="border border-gray-300 px-3 py-2">{sale.weight}g</td>
+                        <td className="border border-gray-300 px-3 py-2">₹{sale.rate}</td>
+                        <td className="border border-gray-300 px-3 py-2 font-semibold">₹{sale.amount}</td>
+                        <td className="border border-gray-300 px-3 py-2">{sale.source}</td>
+                        <td className="border border-gray-300 px-3 py-2">{sale.date}</td>
+                      </tr>
+                    ))}
+                    {salesTab === 'gold' && goldSalesDetails.map((sale) => (
+                      <tr key={sale.id} className="hover:bg-gray-50">
+                        <td className="border border-gray-300 px-3 py-2">{sale.name}</td>
+                        <td className="border border-gray-300 px-3 py-2">{sale.saleType}</td>
+                        <td className="border border-gray-300 px-3 py-2">{sale.weight}g</td>
+                        <td className="border border-gray-300 px-3 py-2">₹{sale.rate}</td>
+                        <td className="border border-gray-300 px-3 py-2 font-semibold">₹{sale.amount}</td>
+                        <td className="border border-gray-300 px-3 py-2">{sale.source}</td>
+                        <td className="border border-gray-300 px-3 py-2">{sale.date}</td>
+                      </tr>
+                    ))}
+                    {salesTab === 'silver' && silverSalesDetails.map((sale) => (
                       <tr key={sale.id} className="hover:bg-gray-50">
                         <td className="border border-gray-300 px-3 py-2">{sale.name}</td>
                         <td className="border border-gray-300 px-3 py-2">{sale.saleType}</td>

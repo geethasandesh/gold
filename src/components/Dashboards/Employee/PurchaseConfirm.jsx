@@ -1,7 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { db, auth } from '../../../firebase';
-import { collection, addDoc, serverTimestamp, getDocs, query, where, updateDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, query, where, orderBy } from 'firebase/firestore';
 import Employeeheader from './Employeeheader';
 import { useStore } from '../Admin/StoreContext';
  
@@ -12,12 +12,12 @@ function PurchaseConfirm() {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [employee, setEmployee] = useState('');
-  const [availableCash, setAvailableCash] = useState(0);
-  const [remainingCash, setRemainingCash] = useState(0);
   const [insufficient, setInsufficient] = useState(false);
-  // Add for online
-  const [availableOnline, setAvailableOnline] = useState(0);
-  const [remainingOnline, setRemainingOnline] = useState(0);
+  // Add for sales amounts
+  const [availableGoldSales, setAvailableGoldSales] = useState(0);
+  const [availableSilverSales, setAvailableSilverSales] = useState(0);
+  const [remainingGoldSales, setRemainingGoldSales] = useState(0);
+  const [remainingSilverSales, setRemainingSilverSales] = useState(0);
   
   const { selectedStore } = useStore();
   
@@ -42,95 +42,95 @@ function PurchaseConfirm() {
     fetchUser();
   }, []);
  
-  // Fetch available cash for both ledger and online
+  // Fetch sales amounts
   useEffect(() => {
-    const fetchBoth = async () => {
+    const fetchAll = async () => {
       if (!selectedStore) return;
       
-      // Ledger
-      const qLedger = query(
-        collection(db, 'cashreserves'), 
-        where('type', '==', 'LEDGER'),
-        where('storeId', '==', selectedStore.id)
-      );
-      const snapLedger = await getDocs(qLedger);
-      let ledger = 0;
-      snapLedger.forEach(docSnap => {
-        const d = docSnap.data();
-        if (typeof d.available === 'number' && d.available > ledger) {
-          ledger = d.available;
-        }
-      });
-      setAvailableCash(ledger);
       const amt = parseFloat(data.amount) || 0;
-      setRemainingCash(ledger - amt);
-      // Online
-      const qOnline = query(
-        collection(db, 'cashreserves'), 
-        where('type', '==', 'ONLINE'),
-        where('storeId', '==', selectedStore.id)
-      );
-      const snapOnline = await getDocs(qOnline);
-      let online = 0;
-      snapOnline.forEach(docSnap => {
-        const d = docSnap.data();
-        if (typeof d.available === 'number' && d.available > online) {
-          online = d.available;
-        }
-      });
-      setAvailableOnline(online);
-      setRemainingOnline(online - amt);
-      // Insufficient only for selected mode
-      if (data.paymentType === 'CASH') {
-        if (data.cashMode === 'PHYSICAL') {
-          setInsufficient((ledger - amt) < 0);
-        } else {
-          setInsufficient((online - amt) < 0);
-        }
-      }
+      
+      // Fetch sales amounts
+         // Fetch all sales data
+         const allSalesQuery = query(
+           collection(db, 'sales'),
+           where('storeId', '==', selectedStore.id),
+           orderBy('createdAt', 'desc')
+         );
+         const allSalesSnapshot = await getDocs(allSalesQuery);
+         
+                   let goldSalesTotal = 0;
+          let silverSalesTotal = 0;
+         
+                   allSalesSnapshot.forEach(docSnap => {
+            const d = docSnap.data();
+            const amount = parseFloat(d.amount) || 0;
+            
+            // Skip deduction records
+            if (d.isDeduction) {
+              return;
+            }
+            
+            if (d.saleType === 'GOLD') {
+              goldSalesTotal += amount;
+            } else if (d.saleType === 'SILVER') {
+              silverSalesTotal += amount;
+            }
+          });
+         setAvailableGoldSales(goldSalesTotal);
+         setAvailableSilverSales(silverSalesTotal);
+         setRemainingGoldSales(goldSalesTotal - amt);
+         setRemainingSilverSales(silverSalesTotal - amt);
+         
+         // Check insufficient based on purchase type
+         if (data.mainType === 'GOLD') {
+           setInsufficient((goldSalesTotal - amt) < 0);
+         } else if (data.mainType === 'SILVER') {
+           setInsufficient((silverSalesTotal - amt) < 0);
+         }
     };
-    fetchBoth();
-  }, [data.paymentType, data.cashMode, data.amount, selectedStore]);
+    fetchAll();
+  }, [data.amount, data.mainType, selectedStore]);
  
   const handleApprove = async () => {
     if (insufficient) return;
     setLoading(true);
     try {
-      // Deduct from cashreserves if paymentType is CASH
-      let mode = null;
-      if (data.paymentType === 'CASH') {
-        mode = data.cashMode === 'PHYSICAL' ? 'LEDGER' : 'ONLINE';
-      }
-      if (mode) {
-        const q = query(
-          collection(db, 'cashreserves'), 
-          where('type', '==', mode),
-          where('storeId', '==', selectedStore.id)
-        );
-        const snapshot = await getDocs(q);
-        let docId = null;
-        let current = 0;
-        snapshot.forEach(docSnap => {
-          const d = docSnap.data();
-          if (typeof d.available === 'number' && d.available > current) {
-            current = d.available;
-            docId = docSnap.id;
-          }
+      const amt = parseFloat(data.amount) || 0;
+      
+      // Deduct from sales amounts based on purchase type
+      // For gold purchases, deduct from gold sales
+      if (data.mainType === 'GOLD') {
+        // Create a deduction record in sales collection
+        await addDoc(collection(db, 'sales'), {
+          storeId: selectedStore.id,
+          storeName: selectedStore.name,
+          saleType: 'GOLD',
+          name: `Purchase Deduction - ${data.name}`,
+          amount: -amt, // Negative amount to represent deduction
+          date: new Date().toLocaleDateString('en-GB'),
+          createdAt: serverTimestamp(),
+          isDeduction: true,
+          purchaseId: data.id || 'purchase-deduction'
         });
-        const amt = parseFloat(data.amount) || 0;
-        const newTotal = current - amt;
-        if (docId) {
-          await updateDoc(doc(db, 'cashreserves', docId), { available: newTotal });
-        } else {
-          // If not found, create it
-          await addDoc(collection(db, 'cashreserves'), { 
-            type: mode, 
-            available: newTotal,
-            storeId: selectedStore.id,
-            storeName: selectedStore.name
-          });
-        }
       }
+      
+      // For silver purchases, deduct from silver sales
+      if (data.mainType === 'SILVER') {
+        // Create a deduction record in sales collection
+        await addDoc(collection(db, 'sales'), {
+          storeId: selectedStore.id,
+          storeName: selectedStore.name,
+          saleType: 'SILVER',
+          name: `Purchase Deduction - ${data.name}`,
+          amount: -amt, // Negative amount to represent deduction
+          date: new Date().toLocaleDateString('en-GB'),
+          createdAt: serverTimestamp(),
+          isDeduction: true,
+          purchaseId: data.id || 'purchase-deduction'
+        });
+      }
+      
+      // Save the purchase record
       await addDoc(collection(db, 'purchases'), {
         ...data,
         employee,
@@ -139,9 +139,15 @@ function PurchaseConfirm() {
         date: new Date().toLocaleDateString('en-GB'),
         createdAt: serverTimestamp(),
       });
+      
       setToast({ show: true, message: 'Purchase approved and saved!', type: 'success' });
+      
+      // Print receipt after successful transaction
+      printReceipt();
+      
       setTimeout(() => navigate('/employee/purchases'), 1500);
-    } catch {
+    } catch (error) {
+      console.error('Error saving purchase:', error);
       setToast({ show: true, message: 'Error saving purchase.', type: 'error' });
     }
     setLoading(false);
@@ -151,20 +157,104 @@ function PurchaseConfirm() {
     navigate('/employee/purchases');
   };
  
-  // Print functionality
-  const handlePrint = () => {
-    const printContents = document.getElementById('purchase-receipt').innerHTML;
-    const win = window.open('', '', 'height=600,width=500');
-    win.document.write('<html><head><title>Purchase Receipt</title>');
-    win.document.write('<style>body{font-family:monospace;} .border-black{border:2px solid #000;padding:24px;width:400px;margin:auto;}</style>');
-    win.document.write('</head><body >');
-    win.document.write(printContents);
-    win.document.write('</body></html>');
-    win.document.close();
-    win.print();
+  const printReceipt = () => {
+    const currentDate = new Date().toLocaleDateString('en-GB');
+    const currentTime = new Date().toLocaleTimeString('en-GB');
+    
+    // Create a temporary div for printing
+    const printDiv = document.createElement('div');
+    printDiv.innerHTML = `
+      <div style="
+        font-family: 'Courier New', monospace; 
+        margin: 0; 
+        font-size: 12px;
+        line-height: 1.6;
+        background: white;
+        padding: 20px;
+        max-width: 300px;
+        margin: 0 auto;
+        text-align: center;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 9999;
+      ">
+        <div style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">
+          ${selectedStore?.name}
+        </div>
+        <div style="font-size: 14px; margin-bottom: 15px;">
+          Purchase Receipt
+        </div>
+        <div style="margin-bottom: 15px;">
+          Date: ${currentDate} | Time: ${currentTime}
+        </div>
+        
+        <div style="text-align: left; margin-bottom: 15px;">
+          <div style="margin: 3px 0;">Transaction Type: ${data.mainType} PURCHASE</div>
+          <div style="margin: 3px 0;">Customer Name: ${data.name}</div>
+          <div style="margin: 3px 0;">Weight: ${data.weight} gms</div>
+          ${data.subType.includes('KACHA') ? `
+          <div style="margin: 3px 0;">Touch: ${data.touch} %</div>
+          <div style="margin: 3px 0;">Less: ${data.less} %</div>
+          <div style="margin: 3px 0;">Fine Weight: ${data.fine} gms</div>
+          ` : ''}
+          <div style="margin: 3px 0;">Rate: ₹${data.rate}</div>
+          <div style="margin: 3px 0;">Amount: ₹${data.amount}</div>
+          <div style="margin: 3px 0;">Payment Type: ${data.mainType === 'GOLD' ? 'Pay from available gold amount' : 'Pay from available silver amount'}</div>
+          <div style="margin: 3px 0;">Employee: ${employee}</div>
+          <div style="margin: 3px 0;">Store: ${selectedStore?.name}</div>
+        </div>
+        
+        <div style="margin-top: 20px; font-size: 11px;">
+          <div>Thank you for your business!</div>
+          <div style="margin-top: 5px;">Generated on: ${currentDate} at ${currentTime}</div>
+        </div>
+      </div>
+    `;
+    
+    // Add the print div to the page temporarily
+    document.body.appendChild(printDiv);
+    
+    // Hide the entire page content
+    const rootElement = document.getElementById('root');
+    if (rootElement) {
+      rootElement.style.display = 'none';
+    }
+    
+    // Hide all other body elements
+    const bodyChildren = document.body.children;
+    for (let i = 0; i < bodyChildren.length; i++) {
+      const child = bodyChildren[i];
+      if (child !== printDiv) {
+        child.style.display = 'none';
+      }
+    }
+    
+    // Print
+    window.print();
+    
+    // Restore original display after printing
+    setTimeout(() => {
+      // Show the root element again
+      if (rootElement) {
+        rootElement.style.display = '';
+      }
+      
+      // Show all body children again
+      for (let i = 0; i < bodyChildren.length; i++) {
+        const child = bodyChildren[i];
+        if (child !== printDiv) {
+          child.style.display = '';
+        }
+      }
+      
+      // Remove the print div
+      document.body.removeChild(printDiv);
+    }, 1000);
   };
  
-  // Calculation part rendering
+  // Purchase details rendering
   const renderCalc = () => {
     if (data.subType === 'KACHA_GOLD' || data.subType === 'KACHA_SILVER') {
       return (
@@ -172,10 +262,10 @@ function PurchaseConfirm() {
           <div><b>Name</b>: {data.name}</div>
           <div><b>Weight</b>: {data.weight} gms</div>
           <div><b>Touch</b>: {data.touch} %</div>
-          <div><b>Less</b>: {data.less} = {data.lessAuto} % auto</div>
-          <div><b>Fine</b>: {data.lessAuto}% * {data.weight} = {data.fine} gms → auto</div>
-          <div><b>Rate</b>: {data.rate}</div>
-          <div><b>Amount</b>: {data.fine} * {data.rate} = <b>{data.amount}</b> ← auto</div>
+          <div><b>Less</b>: {data.less} %</div>
+          <div><b>Fine</b>: {data.fine} gms</div>
+          <div><b>Rate</b>: ₹{data.rate}</div>
+          <div><b>Amount</b>: ₹{data.amount}</div>
         </>
       );
     } else if (data.subType === 'FINE_GOLD' || data.subType === 'FINE_SILVER') {
@@ -183,8 +273,8 @@ function PurchaseConfirm() {
         <>
           <div><b>Name</b>: {data.name}</div>
           <div><b>Weight</b>: {data.weight} gms</div>
-          <div><b>Rate</b>: {data.rate}</div>
-          <div><b>Amount</b>: {data.weight} * {data.rate} = <b>{data.amount}</b> ← auto</div>
+          <div><b>Rate</b>: ₹{data.rate}</div>
+          <div><b>Amount</b>: ₹{data.amount}</div>
         </>
       );
     }
@@ -252,14 +342,13 @@ function PurchaseConfirm() {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="font-semibold">Payment Type:</span>
-                      <span className="text-green-700">{data.paymentType === 'CASH' ? '💵 Available Cash' : '🏦 Out of Accounts'}</span>
+                      <span className="text-green-700">
+                        {data.mainType === 'GOLD' 
+                          ? '🏦 Pay from available gold amount' 
+                          : '🏦 Pay from available silver amount'
+                        }
+                      </span>
                     </div>
-                    {data.paymentType === 'CASH' && (
-                      <div className="flex justify-between">
-                        <span className="font-semibold">Cash Mode:</span>
-                        <span className="text-green-700">{data.cashMode === 'PHYSICAL' ? '🏪 Physical' : '💳 Online'}</span>
-                      </div>
-                    )}
                     <div className="flex justify-between">
                       <span className="font-semibold">Employee:</span>
                       <span className="text-green-700">{employee}</span>
@@ -268,96 +357,89 @@ function PurchaseConfirm() {
                 </div>
               </div>
 
-              {/* Right Column - Cash Availability */}
+              {/* Right Column - Sales Availability */}
               <div className="space-y-4">
-                {data.paymentType === 'CASH' && (
-                  <div className="bg-gradient-to-r from-yellow-50 to-amber-50 rounded-xl p-4 border border-yellow-200">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-3">Cash Availability</h3>
-                    
-                    {/* Physical Cash */}
-                    <div className="mb-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-lg">🏪</span>
-                        <span className="font-semibold text-gray-700">Physical Cash (Ledger)</span>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2 text-sm">
-                        <div className="bg-white rounded-lg p-2 border border-yellow-200">
-                          <div className="text-xs text-gray-500">Available</div>
-                          <div className="font-bold text-blue-600">₹{availableCash.toLocaleString()}</div>
-                        </div>
-                        <div className="bg-white rounded-lg p-2 border border-yellow-200">
-                          <div className="text-xs text-gray-500">Paying</div>
-                          <div className="font-bold text-red-600">₹{data.amount}</div>
-                        </div>
-                        <div className="bg-white rounded-lg p-2 border border-yellow-200">
-                          <div className="text-xs text-gray-500">Remaining</div>
-                          <div className={`font-bold ${remainingCash >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            ₹{remainingCash.toLocaleString()}
-                          </div>
-                        </div>
-                      </div>
-                      {data.cashMode === 'PHYSICAL' && insufficient && (
-                        <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded-lg">
-                          <div className="text-red-700 text-sm font-semibold flex items-center gap-1">
-                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                            </svg>
-                            Insufficient cash in ledger!
-                          </div>
-                        </div>
-                      )}
-                    </div>
 
-                    {/* Online Cash */}
-                    <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-lg">💳</span>
-                        <span className="font-semibold text-gray-700">Online Cash</span>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2 text-sm">
-                        <div className="bg-white rounded-lg p-2 border border-yellow-200">
-                          <div className="text-xs text-gray-500">Available</div>
-                          <div className="font-bold text-blue-600">₹{availableOnline.toLocaleString()}</div>
-                        </div>
-                        <div className="bg-white rounded-lg p-2 border border-yellow-200">
-                          <div className="text-xs text-gray-500">Paying</div>
-                          <div className="font-bold text-red-600">₹{data.amount}</div>
-                        </div>
-                        <div className="bg-white rounded-lg p-2 border border-yellow-200">
-                          <div className="text-xs text-gray-500">Remaining</div>
-                          <div className={`font-bold ${remainingOnline >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            ₹{remainingOnline.toLocaleString()}
-                          </div>
-                        </div>
-                      </div>
-                      {data.cashMode === 'ONLINE' && insufficient && (
-                        <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded-lg">
-                          <div className="text-red-700 text-sm font-semibold flex items-center gap-1">
-                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                            </svg>
-                            Insufficient cash in online!
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
+                                 {/* Sales Amounts */}
+                 {(
+                   <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-4 border border-purple-200">
+                     <h3 className="text-lg font-semibold text-gray-800 mb-3">Sales Amount Available</h3>
+                     
+                     {/* Show only relevant sales amount based on purchase type */}
+                     {data.mainType === 'GOLD' && (
+                       <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                         <div className="flex items-center gap-2 mb-3">
+                           <span className="text-lg">🥇</span>
+                           <span className="font-semibold text-gray-700">Gold Sales Available</span>
+                         </div>
+                         <div className="grid grid-cols-3 gap-2 text-sm">
+                           <div className="bg-white rounded-lg p-2 border border-yellow-200">
+                             <div className="text-xs text-gray-500">Available</div>
+                             <div className="font-bold text-blue-600">₹{availableGoldSales.toLocaleString()}</div>
+                           </div>
+                           <div className="bg-white rounded-lg p-2 border border-yellow-200">
+                             <div className="text-xs text-gray-500">Paying</div>
+                             <div className="font-bold text-red-600">₹{data.amount}</div>
+                           </div>
+                           <div className="bg-white rounded-lg p-2 border border-yellow-200">
+                             <div className="text-xs text-gray-500">Remaining</div>
+                             <div className={`font-bold ${remainingGoldSales >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                               ₹{remainingGoldSales.toLocaleString()}
+                             </div>
+                           </div>
+                         </div>
+                         {insufficient && (
+                           <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded-lg">
+                             <div className="text-red-700 text-sm font-semibold flex items-center gap-1">
+                               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                               </svg>
+                               Insufficient gold sales amount!
+                             </div>
+                           </div>
+                         )}
+                       </div>
+                     )}
+
+                     {data.mainType === 'SILVER' && (
+                       <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                         <div className="flex items-center gap-2 mb-3">
+                           <span className="text-lg">🥈</span>
+                           <span className="font-semibold text-gray-700">Silver Sales Available</span>
+                         </div>
+                         <div className="grid grid-cols-3 gap-2 text-sm">
+                           <div className="bg-white rounded-lg p-2 border border-gray-200">
+                             <div className="text-xs text-gray-500">Available</div>
+                             <div className="font-bold text-blue-600">₹{availableSilverSales.toLocaleString()}</div>
+                           </div>
+                           <div className="bg-white rounded-lg p-2 border border-gray-200">
+                             <div className="text-xs text-gray-500">Paying</div>
+                             <div className="font-bold text-red-600">₹{data.amount}</div>
+                           </div>
+                           <div className="bg-white rounded-lg p-2 border border-gray-200">
+                             <div className="text-xs text-gray-500">Remaining</div>
+                             <div className={`font-bold ${remainingSilverSales >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                               ₹{remainingSilverSales.toLocaleString()}
+                             </div>
+                           </div>
+                         </div>
+                         {insufficient && (
+                           <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded-lg">
+                             <div className="text-red-700 text-sm font-semibold flex items-center gap-1">
+                               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                               </svg>
+                               Insufficient silver sales amount!
+                             </div>
+                           </div>
+                         )}
+                       </div>
+                     )}
+                   </div>
+                 )}
 
                 {/* Action Buttons */}
                 <div className="space-y-3">
-                  <div className="flex gap-3">
-                    <button
-                      onClick={handlePrint}
-                      className="flex-1 px-4 py-3 bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl flex items-center justify-center gap-2 transition-all duration-200"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                      </svg>
-                      Print Receipt
-                    </button>
-                  </div>
-                  
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       onClick={handleApprove}
