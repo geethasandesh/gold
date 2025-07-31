@@ -275,6 +275,10 @@ function SaleConfirm() {
         createdAt: serverTimestamp(),
       });
       setToast({ show: true, message: 'Sale approved and saved!', type: 'success' });
+      
+      // Print receipt after successful sale
+      printReceipt();
+      
       setTimeout(() => navigate('/employee/sales'), 1500);
     } catch {
       setToast({ show: true, message: 'Error saving sale.', type: 'error' });
@@ -282,6 +286,99 @@ function SaleConfirm() {
     setLoading(false);
   };
  
+  const printReceipt = () => {
+    const currentDate = new Date().toLocaleDateString('en-GB');
+    const currentTime = new Date().toLocaleTimeString('en-GB');
+    
+    // Create a temporary div for printing
+    const printDiv = document.createElement('div');
+    printDiv.innerHTML = `
+      <div style="
+        font-family: 'Courier New', monospace; 
+        margin: 0; 
+        font-size: 12px;
+        line-height: 1.6;
+        background: white;
+        padding: 20px;
+        max-width: 300px;
+        margin: 0 auto;
+        text-align: center;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 9999;
+      ">
+        <div style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">
+          ${selectedStore?.name}
+        </div>
+        <div style="font-size: 14px; margin-bottom: 15px;">
+          Sale Receipt
+        </div>
+        <div style="margin-bottom: 15px;">
+          Date: ${currentDate} | Time: ${currentTime}
+        </div>
+        
+        <div style="text-align: left; margin-bottom: 15px;">
+          <div style="margin: 3px 0;">Transaction Type: ${data.saleType} SALE</div>
+          <div style="margin: 3px 0;">Customer Name: ${data.name}</div>
+          <div style="margin: 3px 0;">Weight: ${data.weight} gms</div>
+          <div style="margin: 3px 0;">Rate: ₹${data.rate}/gram</div>
+          <div style="margin: 3px 0;">Amount: ₹${data.amount}</div>
+          <div style="margin: 3px 0;">Payment Mode: ${data.mode === 'CASH' ? '💵 Cash' : '💳 Online'}</div>
+          <div style="margin: 3px 0;">Payment Source: ${selectedSource}</div>
+          <div style="margin: 3px 0;">Employee: ${employee}</div>
+          <div style="margin: 3px 0;">Store: ${selectedStore?.name}</div>
+        </div>
+        
+        <div style="margin-top: 20px; font-size: 11px;">
+          <div>Thank you for your business!</div>
+          <div style="margin-top: 5px;">Generated on: ${currentDate} at ${currentTime}</div>
+        </div>
+      </div>
+    `;
+    
+    // Add the print div to the page temporarily
+    document.body.appendChild(printDiv);
+    
+    // Hide the entire page content
+    const rootElement = document.getElementById('root');
+    if (rootElement) {
+      rootElement.style.display = 'none';
+    }
+    
+    // Hide all other body elements
+    const bodyChildren = document.body.children;
+    for (let i = 0; i < bodyChildren.length; i++) {
+      const child = bodyChildren[i];
+      if (child !== printDiv) {
+        child.style.display = 'none';
+      }
+    }
+    
+    // Print
+    window.print();
+    
+    // Restore original display after printing
+    setTimeout(() => {
+      // Show the root element again
+      if (rootElement) {
+        rootElement.style.display = '';
+      }
+      
+      // Show all body children again
+      for (let i = 0; i < bodyChildren.length; i++) {
+        const child = bodyChildren[i];
+        if (child !== printDiv) {
+          child.style.display = '';
+        }
+      }
+      
+      // Remove the print div
+      document.body.removeChild(printDiv);
+    }, 1000);
+  };
+
   const handleDeny = () => {
     if (insufficient) return;
     navigate('/employee/sales');
@@ -350,38 +447,58 @@ function SaleConfirm() {
                 {/* Payment Source Selection */}
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
                   <h3 className="text-lg font-semibold text-gray-800 mb-3">Payment Source</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedSource(localType)}
-                      className={`relative p-3 rounded-xl border-2 transition-all duration-200 ${
-                        selectedSource === localType
-                          ? 'border-blue-500 bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg'
-                          : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50 text-gray-700'
-                      } hover:shadow-md`}
-                    >
-                      <div className="text-center">
-                        <div className="text-lg mb-1">🏪</div>
-                        <div className="font-semibold text-sm">{localLabel}</div>
-                        <div className="text-xs opacity-75">{localType}</div>
+                  <div className="flex justify-center">
+                    {selectedSource === localType ? (
+                      <button
+                        type="button"
+                        className="relative p-4 rounded-xl border-2 border-blue-500 bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg transition-all duration-200 hover:shadow-xl"
+                      >
+                        <div className="text-center">
+                          <div className="text-xl mb-2">🏪</div>
+                          <div className="font-semibold text-lg">{localLabel}</div>
+                          <div className="text-sm opacity-90">{localType}</div>
+                          <div className="text-xs opacity-75 mt-1">Selected</div>
+                        </div>
+                      </button>
+                    ) : selectedSource === bankType ? (
+                      <button
+                        type="button"
+                        className="relative p-4 rounded-xl border-2 border-yellow-500 bg-gradient-to-r from-yellow-500 to-amber-500 text-white shadow-lg transition-all duration-200 hover:shadow-xl"
+                      >
+                        <div className="text-center">
+                          <div className="text-xl mb-2">🏦</div>
+                          <div className="font-semibold text-lg">{bankLabel}</div>
+                          <div className="text-sm opacity-90">{bankType}</div>
+                          <div className="text-xs opacity-75 mt-1">Selected</div>
+                        </div>
+                      </button>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedSource(localType)}
+                          className="relative p-3 rounded-xl border-2 border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50 text-gray-700 transition-all duration-200 hover:shadow-md"
+                        >
+                          <div className="text-center">
+                            <div className="text-lg mb-1">🏪</div>
+                            <div className="font-semibold text-sm">{localLabel}</div>
+                            <div className="text-xs opacity-75">{localType}</div>
+                          </div>
+                        </button>
+                        
+                        <button
+                          type="button"
+                          onClick={() => setSelectedSource(bankType)}
+                          className="relative p-3 rounded-xl border-2 border-gray-200 bg-white hover:border-yellow-300 hover:bg-yellow-50 text-gray-700 transition-all duration-200 hover:shadow-md"
+                        >
+                          <div className="text-center">
+                            <div className="text-lg mb-1">🏦</div>
+                            <div className="font-semibold text-sm">{bankLabel}</div>
+                            <div className="text-xs opacity-75">{bankType}</div>
+                          </div>
+                        </button>
                       </div>
-                    </button>
-                    
-                    <button
-                      type="button"
-                      onClick={() => setSelectedSource(bankType)}
-                      className={`relative p-3 rounded-xl border-2 transition-all duration-200 ${
-                        selectedSource === bankType
-                          ? 'border-yellow-500 bg-gradient-to-r from-yellow-500 to-amber-500 text-white shadow-lg'
-                          : 'border-gray-200 bg-white hover:border-yellow-300 hover:bg-yellow-50 text-gray-700'
-                      } hover:shadow-md`}
-                    >
-                      <div className="text-center">
-                        <div className="text-lg mb-1">🏦</div>
-                        <div className="font-semibold text-sm">{bankLabel}</div>
-                        <div className="text-xs opacity-75">{bankType}</div>
-                      </div>
-                    </button>
+                    )}
                   </div>
                 </div>
               </div>

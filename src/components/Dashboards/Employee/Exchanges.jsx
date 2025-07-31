@@ -15,6 +15,7 @@ function Exchanges() {
   const [lessAuto, setLessAuto] = useState('');
   const [fineAuto, setFineAuto] = useState('');
   const [amount, setAmount] = useState('');
+  const [exchangeRate, setExchangeRate] = useState('0.25');
   const navigate = useNavigate();
   
   const { selectedStore } = useStore();
@@ -34,7 +35,7 @@ function Exchanges() {
 
   // Form validation check - different requirements for GOLD vs SILVER
   const isFormValid = form.name && form.weight && form.touch && 
-    (form.type === 'GOLD' || (form.type === 'SILVER' && amount));
+    (form.type === 'GOLD' || (form.type === 'SILVER' && amount && exchangeRate));
 
   useEffect(() => {
     const weight = parseFloat(form.weight) || 0;
@@ -48,7 +49,8 @@ function Exchanges() {
 
     // Amount calculation only for SILVER exchange
     if (form.type === 'SILVER') {
-      const rawAmount = (fineResult ? fineResult : 0) * 0.25;
+      const rate = parseFloat(exchangeRate) || 0;
+      const rawAmount = (fineResult ? fineResult : 0) * rate;
       // Round UP to next multiple of 5
       const amt = Math.ceil(rawAmount / 5) * 5;
     setAmount(fineResult ? amt : '');
@@ -56,11 +58,15 @@ function Exchanges() {
       // For GOLD exchange, no amount calculation
       setAmount('');
     }
-  }, [form.weight, form.touch, form.less, form.type]);
+  }, [form.weight, form.touch, form.less, form.type, exchangeRate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleExchangeRateChange = (e) => {
+    setExchangeRate(e.target.value);
   };
 
   const handleSubmit = (source) => {
@@ -70,6 +76,7 @@ function Exchanges() {
         lessAuto,
         fine: fineAuto,
         amount,
+        exchangeRate,
         source,
         type: form.type,
         storeId: selectedStore?.id,
@@ -262,10 +269,40 @@ function Exchanges() {
                 </div>
               </div>
 
+              {/* Exchange Rate for Silver */}
+              {form.type === 'SILVER' && (
+                <div className="space-y-3">
+                  <label className="block text-lg font-semibold text-gray-800 mb-3">
+                    Exchange Rate
+                  </label>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <svg className="h-6 w-6 text-yellow-400 group-focus-within:text-yellow-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                      </svg>
+                    </div>
+                    <input
+                      name="exchangeRate"
+                      value={exchangeRate}
+                      onChange={handleExchangeRateChange}
+                      required
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      className="w-full pl-14 pr-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-yellow-100 focus:border-yellow-500 text-lg transition-all duration-200 bg-gray-50 focus:bg-white" 
+                      placeholder="Enter exchange rate (e.g., 0.25)"
+                    />
+                  </div>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Rate used to calculate amount: Fine × Rate = Amount
+                  </p>
+                </div>
+              )}
+
               {/* Auto Calculations */}
               <div className="bg-gradient-to-r from-yellow-50 to-amber-50 rounded-2xl p-6 border border-yellow-200">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Automatic Calculations</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="text-center">
                     <div className="text-sm text-gray-600 mb-1">Touch - Less =</div>
                     <div className="bg-white rounded-xl p-3 border border-yellow-200">
@@ -279,13 +316,21 @@ function Exchanges() {
                     </div>
                   </div>
                   {form.type === 'SILVER' && (
-                    <div className="text-center">
-                      <div className="text-sm text-gray-600 mb-1">Amount (₹)</div>
-                      <div className="bg-white rounded-xl p-3 border border-yellow-200">
-                        <span className="text-xl font-bold text-green-600">₹{amount || '0'}</span>
-                        <div className="text-xs text-gray-500 mt-1">(rounded up)</div>
+                    <>
+                      <div className="text-center">
+                        <div className="text-sm text-gray-600 mb-1">Exchange Rate</div>
+                        <div className="bg-white rounded-xl p-3 border border-yellow-200">
+                          <span className="text-xl font-bold text-blue-600">{exchangeRate || '0.00'}</span>
+                        </div>
                       </div>
-                    </div>
+                      <div className="text-center">
+                        <div className="text-sm text-gray-600 mb-1">Amount (₹)</div>
+                        <div className="bg-white rounded-xl p-3 border border-yellow-200">
+                          <span className="text-xl font-bold text-green-600">₹{amount || '0'}</span>
+                          <div className="text-xs text-gray-500 mt-1">(rounded up)</div>
+                        </div>
+                      </div>
+                    </>
                   )}
             </div>
             </div>

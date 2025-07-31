@@ -5,26 +5,22 @@ import { collection, addDoc, getDocs, serverTimestamp } from 'firebase/firestore
 import { CheckCircle, AlertCircle, Loader2, User, FileText, Edit, IndianRupee, Sparkles, Zap } from 'lucide-react';
 import { useStore } from './StoreContext';
 import { useNavigate } from 'react-router-dom';
-
 function Admintokens() {
   const [form, setForm] = useState({ name: '', purpose: 'GTS', amount: '' });
   const [customPurpose, setCustomPurpose] = useState('');
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
-
   const { selectedStore } = useStore();
   const navigate = useNavigate();
   useEffect(() => {
     if (!selectedStore) navigate('/admin');
   }, [selectedStore, navigate]);
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
     if (name === 'purpose' && value !== 'CUSTOM') setCustomPurpose('');
   };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name.trim() || !form.amount.trim() || (form.purpose === 'CUSTOM' && !customPurpose.trim())) {
@@ -61,7 +57,6 @@ function Admintokens() {
     }
     setLoading(false);
   };
-
   // Print functionality
   const handlePrint = () => {
     const printContents = document.getElementById('token-preview').innerHTML;
@@ -74,7 +69,6 @@ function Admintokens() {
     win.document.close();
     win.print();
   };
-
   // Toast auto-hide
   useEffect(() => {
     if (toast.show) {
@@ -82,7 +76,6 @@ function Admintokens() {
       return () => clearTimeout(timer);
     }
   }, [toast]);
-
   return (
     <>
       <Adminheader />
@@ -102,7 +95,6 @@ function Admintokens() {
                     <p className="text-gray-600 mt-1">Fill in the details below to generate a professional token</p>
                   </div>
                 </div>
-
                 <form onSubmit={handleSubmit} className="space-y-8">
                   {/* Customer Name */}
                   <div className="space-y-3">
@@ -124,7 +116,6 @@ function Admintokens() {
                       />
                     </div>
                   </div>
-
                   {/* Purpose Selection */}
                   <div className="space-y-4">
                     <label className="block text-lg font-semibold text-gray-800 mb-3">
@@ -164,7 +155,6 @@ function Admintokens() {
                         </label>
                       ))}
                     </div>
-                    
                     {form.purpose === 'CUSTOM' && (
                       <div className="mt-6 animate-fade-in">
                         <label className="block text-base font-semibold text-gray-700 mb-2">
@@ -185,7 +175,6 @@ function Admintokens() {
                 </div>
               )}
             </div>
-
                   {/* Amount */}
             <div className="space-y-3">
                     <label className="block text-lg font-semibold text-gray-800 mb-3">
@@ -199,7 +188,7 @@ function Admintokens() {
                       <input 
                         name="amount" 
                         value={form.amount} 
-                        onChange={handleChange} 
+                        onChange={handleChange}
                         required 
                         className="w-full pl-14 pr-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-yellow-100 focus:border-yellow-500 text-lg transition-all duration-200 bg-gray-50 focus:bg-white" 
                         type="number" 
@@ -208,7 +197,6 @@ function Admintokens() {
                       />
                     </div>
                   </div>
-
                   {/* Submit Button */}
                   <button 
                     type="submit" 
@@ -230,7 +218,6 @@ function Admintokens() {
                 </form>
               </div>
             </div>
-
             {/* Token Preview Section */}
             <div className="space-y-8">
               {preview ? (
@@ -244,12 +231,10 @@ function Admintokens() {
                       <p className="text-gray-600 mt-1">Your generated token is ready for printing</p>
                     </div>
                   </div>
-
                   <div className="flex justify-center">
                     <div id="token-preview" className="border-2 border-black p-8 w-[380px] bg-white relative rounded-2xl shadow-2xl transform rotate-1 hover:rotate-0 transition-transform duration-300" style={{fontFamily: 'monospace'}}>
                 <div className="text-center font-bold text-lg mb-2 text-yellow-800">SRI GAYATRI ASSAYING CENTRE</div>
                 <div className="mt-2 text-yellow-700 font-semibold">DETAILS:</div>
-                
                 <div className="flex justify-between mb-2 text-base">
                   <span className="font-semibold">TOKEN NO : {preview.tokenNo}</span>
                   <span className="font-semibold">DATE: {preview.date}</span>
@@ -261,7 +246,6 @@ function Admintokens() {
                 </div>
               </div>
                   </div>
-
                   <div className="flex justify-center mt-8">
                     <button 
                       onClick={handlePrint} 
@@ -283,7 +267,6 @@ function Admintokens() {
                       <p className="text-gray-600 mt-1">Generate a token to see the preview here</p>
                     </div>
                   </div>
-                  
                   <div className="flex justify-center items-center h-64 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-300">
                     <div className="text-center">
                       <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -296,7 +279,6 @@ function Admintokens() {
             </div>
           </div>
         </div>
-
         {/* Toast Notification */}
         {toast.show && (
           <div className={`fixed top-6 left-1/2 transform -translate-x-1/2 px-8 py-4 rounded-2xl shadow-2xl z-[9999] flex items-center gap-3 text-white text-lg font-semibold ${toast.type === 'success' ? 'bg-gradient-to-r from-green-500 to-emerald-600' : 'bg-gradient-to-r from-red-500 to-pink-600'} animate-fade-in`}>
@@ -305,7 +287,6 @@ function Admintokens() {
           </div>
         )}
       </div>
-      
       {/* Animations */}
       <style>{`
         @keyframes fade-in {
@@ -319,5 +300,4 @@ function Admintokens() {
     </>
   );
 }
-
 export default Admintokens;
