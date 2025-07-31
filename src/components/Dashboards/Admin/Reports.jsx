@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import Adminheader from './Adminheader';
 import { db } from '../../../firebase';
-import { collection, getDocs, query, orderBy, where } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, where, deleteDoc, doc, Timestamp, addDoc, serverTimestamp } from 'firebase/firestore';
 import ExcelJS from 'exceljs';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -45,18 +45,176 @@ function Reports() {
     dropdownOpen: false
   });
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const [isCleaning, setIsCleaning] = useState(false);
+  const [showReminder, setShowReminder] = useState(false);
 
   const { selectedStore } = useStore();
   const navigate = useNavigate();
+
+  // Function to clean up old data (older than 1 month)
+  const cleanupOldData = async (showToast = false) => {
+    if (!selectedStore) return;
+    
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    const oneMonthAgoTimestamp = Timestamp.fromDate(oneMonthAgo);
+    
+    try {
+      setIsCleaning(true);
+      let totalDeleted = 0;
+      
+      // Collections to clean up
+      const collections = ['tokens', 'sales', 'purchases', 'exchanges'];
+      
+      for (const collectionName of collections) {
+        try {
+          // Try with index first
+          const q = query(
+            collection(db, collectionName),
+            where('storeId', '==', selectedStore.id),
+            where('createdAt', '<', oneMonthAgoTimestamp)
+          );
+          
+          const snapshot = await getDocs(q);
+          const deletePromises = snapshot.docs.map(docSnap => 
+            deleteDoc(doc(db, collectionName, docSnap.id))
+          );
+          
+          if (deletePromises.length > 0) {
+            await Promise.all(deletePromises);
+            totalDeleted += deletePromises.length;
+            console.log(`Cleaned up ${deletePromises.length} old ${collectionName} records`);
+          }
+        } catch (indexError) {
+          if (indexError.message.includes('index')) {
+            console.log(`Index not ready for ${collectionName}, skipping cleanup for this collection`);
+            continue;
+          }
+          throw indexError;
+        }
+      }
+      
+      if (showToast) {
+        setToast({ 
+          show: true, 
+          message: `Cleaned up ${totalDeleted} old records (older than 1 month)`, 
+          type: 'success' 
+        });
+      }
+    } catch (error) {
+      console.error('Error cleaning up old data:', error);
+      if (showToast) {
+        setToast({ 
+          show: true, 
+          message: 'Error cleaning up old data', 
+          type: 'error' 
+        });
+      }
+    } finally {
+      setIsCleaning(false);
+    }
+  };
+
+  // Function to check if reminder should be shown
+  const checkReminder = () => {
+    const lastReminder = localStorage.getItem('lastDataCleanupReminder');
+    const currentDate = new Date();
+    
+    if (!lastReminder) {
+      // First time - set reminder for next month
+      const nextMonth = new Date();
+      nextMonth.setMonth(nextMonth.getMonth() + 1);
+      localStorage.setItem('lastDataCleanupReminder', nextMonth.toISOString());
+      return false;
+    }
+    
+    const lastReminderDate = new Date(lastReminder);
+    const daysSinceLastReminder = Math.floor((currentDate - lastReminderDate) / (1000 * 60 * 60 * 24));
+    
+    // Show reminder if it's been more than 30 days since last reminder
+    if (daysSinceLastReminder >= 30) {
+      setShowReminder(true);
+      return true;
+    }
+    
+    return false;
+  };
+
+  // Function to send WhatsApp notification
+  const sendWhatsAppNotification = async () => {
+    try {
+      const message = `🔔 Data Cleanup Reminder\n\nYour Gold Management System has data older than 1 month that needs to be cleaned up.\n\nPlease log into your admin dashboard and use the "Clean Old Data" button to remove old records.\n\nThis helps keep your system running efficiently.\n\nStore: ${selectedStore?.name || 'All Stores'}\nDate: ${new Date().toLocaleDateString('en-GB')}`;
+      
+      const whatsappUrl = `https://wa.me/917207856531?text=${encodeURIComponent(message)}`;
+      
+      // Open WhatsApp in new tab
+      window.open(whatsappUrl, '_blank');
+      
+      console.log('WhatsApp notification sent');
+    } catch (error) {
+      console.error('Error sending WhatsApp notification:', error);
+    }
+  };
+
+  // Function to create admin notification
+  const createAdminNotification = async () => {
+    try {
+      await addDoc(collection(db, 'admin_notifications'), {
+        title: 'Data Cleanup Reminder',
+        message: 'Your system has data older than 1 month that needs to be cleaned up. Please use the "Clean Old Data" button to remove old records.',
+        type: 'cleanup_reminder',
+        storeId: selectedStore?.id,
+        storeName: selectedStore?.name,
+        createdAt: serverTimestamp(),
+        seen: false,
+        priority: 'high'
+      });
+    } catch (error) {
+      console.error('Error creating admin notification:', error);
+    }
+  };
+
+  const handleManualCleanup = async () => {
+    await cleanupOldData(true);
+    
+    // Mark reminder as completed
+    const nextMonth = new Date();
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    localStorage.setItem('lastDataCleanupReminder', nextMonth.toISOString());
+    setShowReminder(false);
+  };
 
   // Navigate to admin if no store is selected
   useEffect(() => {
     if (!selectedStore) navigate('/admin');
   }, [selectedStore, navigate]);
 
+  // Auto-hide toast after 2 seconds
+  useEffect(() => {
+    if (toast.show) {
+      const timer = setTimeout(() => {
+        setToast({ show: false, message: '', type: 'success' });
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [toast.show]);
+
   useEffect(() => {
     const fetchData = async () => {
       if (!selectedStore) return;
+      
+      // Check for reminder
+      const shouldShowReminder = checkReminder();
+      if (shouldShowReminder) {
+        // Send WhatsApp notification
+        sendWhatsAppNotification();
+        // Create admin notification
+        createAdminNotification();
+      }
+      
+      // Clean up old data first
+      await cleanupOldData();
       
       setLoading(true);
       try {
@@ -1963,13 +2121,52 @@ function Reports() {
           </div>
         )}
         <div className="w-full max-w-6xl bg-white/90 rounded-2xl shadow-xl p-8 border border-yellow-100 mt-8">
-          <div className="flex gap-4 mb-6">
-            <button onClick={() => setTab('EXCHANGES')} className={`px-6 py-2 rounded-lg font-bold ${tab === 'EXCHANGES' ? 'bg-yellow-400 text-black' : 'bg-gray-200 text-gray-700'}`}>Exchanges</button>
-            <button onClick={() => setTab('PURCHASES')} className={`px-6 py-2 rounded-lg font-bold ${tab === 'PURCHASES' ? 'bg-yellow-400 text-black' : 'bg-gray-200 text-gray-700'}`}>Purchases</button>
-            <button onClick={() => setTab('SALES')} className={`px-6 py-2 rounded-lg font-bold ${tab === 'SALES' ? 'bg-yellow-400 text-black' : 'bg-gray-200 text-gray-700'}`}>Sales</button>
-            <button onClick={() => setTab('CASH')} className={`px-6 py-2 rounded-lg font-bold ${tab === 'CASH' ? 'bg-yellow-400 text-black' : 'bg-gray-200 text-gray-700'}`}>Cash Movements</button>
-            <button onClick={() => setTab('TOKENS')} className={`px-6 py-2 rounded-lg font-bold ${tab === 'TOKENS' ? 'bg-yellow-400 text-black' : 'bg-gray-200 text-gray-700'}`}>Tokens</button>
+          {/* Data Cleanup Reminder */}
+          {showReminder && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="text-red-500">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-red-800">Data Cleanup Reminder</h3>
+                  <p className="text-red-700 text-sm">Your system has data older than 1 month that needs to be cleaned up. WhatsApp notification has been sent to 7207856531.</p>
+                </div>
+                <button
+                  onClick={() => setShowReminder(false)}
+                  className="text-red-500 hover:text-red-700"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
+          
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex gap-4">
+              <button onClick={() => setTab('EXCHANGES')} className={`px-6 py-2 rounded-lg font-bold ${tab === 'EXCHANGES' ? 'bg-yellow-400 text-black' : 'bg-gray-200 text-gray-700'}`}>Exchanges</button>
+              <button onClick={() => setTab('PURCHASES')} className={`px-6 py-2 rounded-lg font-bold ${tab === 'PURCHASES' ? 'bg-yellow-400 text-black' : 'bg-gray-200 text-gray-700'}`}>Purchases</button>
+              <button onClick={() => setTab('SALES')} className={`px-6 py-2 rounded-lg font-bold ${tab === 'SALES' ? 'bg-yellow-400 text-black' : 'bg-gray-200 text-gray-700'}`}>Sales</button>
+              <button onClick={() => setTab('CASH')} className={`px-6 py-2 rounded-lg font-bold ${tab === 'CASH' ? 'bg-yellow-400 text-black' : 'bg-gray-200 text-gray-700'}`}>Cash Movements</button>
+              <button onClick={() => setTab('TOKENS')} className={`px-6 py-2 rounded-lg font-bold ${tab === 'TOKENS' ? 'bg-yellow-400 text-black' : 'bg-gray-200 text-gray-700'}`}>Tokens</button>
+            </div>
+            <button
+              onClick={handleManualCleanup}
+              disabled={isCleaning}
+              className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${
+                isCleaning
+                  ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                  : 'bg-red-500 hover:bg-red-600 text-white'
+              }`}
+            >
+              {isCleaning ? 'Cleaning...' : 'Clean Old Data (1+ month)'}
+            </button>
           </div>
+
           <div className="flex flex-wrap gap-4 mb-6 items-center justify-between">
             <div className="flex gap-2 items-center">
               <input

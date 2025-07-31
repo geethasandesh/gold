@@ -44,6 +44,28 @@ function Adminheader() {
     // Navigate to the relevant reserves page
     navigate(notif.link);
   };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      // Get all unseen notifications
+      const unseenNotifications = notifications.filter(notif => !notif.seen);
+      
+      if (unseenNotifications.length === 0) {
+        setShowNotif(false);
+        return;
+      }
+      
+      // Update all unseen notifications to seen
+      const updatePromises = unseenNotifications.map(notif => 
+        updateDoc(doc(db, 'admin_notifications', notif.id), { seen: true })
+      );
+      
+      await Promise.all(updatePromises);
+      setShowNotif(false);
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+    }
+  };
  
   const handleLogout = async () => {
     try {
@@ -175,7 +197,7 @@ function Adminheader() {
                     </div>
                   ) : (
                     <div className="p-2">
-                      {notifications.map((notif, index) => (
+                      {notifications.map((notif) => (
                         <div
                           key={notif.id}
                           className="group relative bg-gradient-to-r from-yellow-50 to-amber-50 hover:from-yellow-100 hover:to-amber-100 border border-yellow-200 hover:border-yellow-300 rounded-xl p-4 mb-2 cursor-pointer transition-all duration-200 hover:shadow-md transform hover:-translate-y-0.5"
@@ -215,7 +237,10 @@ function Adminheader() {
                 {/* Footer */}
                 {notifications.length > 0 && (
                   <div className="bg-gray-50 p-3 rounded-b-2xl border-t border-gray-200">
-                    <button className="w-full text-center text-yellow-700 hover:text-yellow-800 font-medium text-sm py-2 hover:bg-yellow-100 rounded-lg transition-colors">
+                    <button 
+                      onClick={handleMarkAllAsRead}
+                      className="w-full text-center text-yellow-700 hover:text-yellow-800 font-medium text-sm py-2 hover:bg-yellow-100 rounded-lg transition-colors"
+                    >
                       Mark all as read
                     </button>
                   </div>

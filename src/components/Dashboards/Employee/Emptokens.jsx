@@ -260,7 +260,6 @@ function Emptokens() {
                       <div className="mt-2 text-yellow-700 font-semibold">DETAILS:</div>
                       <div className="mt-2 mb-2 text-gray-400">---------------------------------------------------------------------</div>
                       <div className="flex justify-between mb-2 text-base">
-                        <span className="font-semibold">TOKEN NO : {preview.tokenNo}</span>
                         <span className="font-semibold">DATE: {preview.date}</span>
                       </div>
                       <div className="mt-4">

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import Adminheader from './Adminheader';
 import { db } from '../../../firebase';
-import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, deleteDoc, doc, Timestamp, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useStore } from './StoreContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -13,6 +13,13 @@ function Adminfile() {
   const [totalAmount, setTotalAmount] = useState(0);
   const [activeTab, setActiveTab] = useState('overview');
   const [tokenDetails, setTokenDetails] = useState([]);
+  const [gtsTokens, setGtsTokens] = useState([]);
+  const [solderingTokens, setSolderingTokens] = useState([]);
+  const [customTokens, setCustomTokens] = useState([]);
+  const [gtsAmount, setGtsAmount] = useState(0);
+  const [solderingAmount, setSolderingAmount] = useState(0);
+  const [customAmount, setCustomAmount] = useState(0);
+  const [tokenTab, setTokenTab] = useState('all'); // 'all', 'gts', 'soldering', 'custom'
   const [salesDetails, setSalesDetails] = useState([]);
   const [goldSalesDetails, setGoldSalesDetails] = useState([]);
   const [silverSalesDetails, setSilverSalesDetails] = useState([]);
@@ -20,18 +27,176 @@ function Adminfile() {
   const [silverSalesAmount, setSilverSalesAmount] = useState(0);
   const [salesTab, setSalesTab] = useState('all'); // 'all', 'gold', 'silver'
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const [isCleaning, setIsCleaning] = useState(false);
+  const [showReminder, setShowReminder] = useState(false);
   
   const { selectedStore } = useStore();
   const navigate = useNavigate();
   
+  // Function to check if reminder should be shown
+  const checkReminder = () => {
+    const lastReminder = localStorage.getItem('lastDataCleanupReminder');
+    const currentDate = new Date();
+    
+    if (!lastReminder) {
+      // First time - set reminder for next month
+      const nextMonth = new Date();
+      nextMonth.setMonth(nextMonth.getMonth() + 1);
+      localStorage.setItem('lastDataCleanupReminder', nextMonth.toISOString());
+      return false;
+    }
+    
+    const lastReminderDate = new Date(lastReminder);
+    const daysSinceLastReminder = Math.floor((currentDate - lastReminderDate) / (1000 * 60 * 60 * 24));
+    
+    // Show reminder if it's been more than 30 days since last reminder
+    if (daysSinceLastReminder >= 30) {
+      setShowReminder(true);
+      return true;
+    }
+    
+    return false;
+  };
+
+  // Function to send WhatsApp notification
+  const sendWhatsAppNotification = async () => {
+    try {
+      const message = `🔔 Data Cleanup Reminder\n\nYour Gold Management System has data older than 1 month that needs to be cleaned up.\n\nPlease log into your admin dashboard and use the "Clean Old Data" button to remove old records.\n\nThis helps keep your system running efficiently.\n\nStore: ${selectedStore?.name || 'All Stores'}\nDate: ${new Date().toLocaleDateString('en-GB')}`;
+      
+      const whatsappUrl = `https://wa.me/917207856531?text=${encodeURIComponent(message)}`;
+      
+      // Open WhatsApp in new tab
+      window.open(whatsappUrl, '_blank');
+      
+      console.log('WhatsApp notification sent');
+    } catch (error) {
+      console.error('Error sending WhatsApp notification:', error);
+    }
+  };
+
+  // Function to create admin notification
+  const createAdminNotification = async () => {
+    try {
+      await addDoc(collection(db, 'admin_notifications'), {
+        title: 'Data Cleanup Reminder',
+        message: 'Your system has data older than 1 month that needs to be cleaned up. Please use the "Clean Old Data" button to remove old records.',
+        type: 'cleanup_reminder',
+        storeId: selectedStore?.id,
+        storeName: selectedStore?.name,
+        createdAt: serverTimestamp(),
+        seen: false,
+        priority: 'high'
+      });
+    } catch (error) {
+      console.error('Error creating admin notification:', error);
+    }
+  };
+
   // Navigate to admin dashboard if no store is selected
   useEffect(() => {
     if (!selectedStore) navigate('/admin');
   }, [selectedStore, navigate]);
 
+  // Auto-hide toast after 2 seconds
+  useEffect(() => {
+    if (toast.show) {
+      const timer = setTimeout(() => {
+        setToast({ show: false, message: '', type: 'success' });
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [toast.show]);
+
+  // Function to clean up old data (older than 1 month)
+  const cleanupOldData = async (showToast = false) => {
+    if (!selectedStore) return;
+    
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    const oneMonthAgoTimestamp = Timestamp.fromDate(oneMonthAgo);
+    
+    try {
+      setIsCleaning(true);
+      let totalDeleted = 0;
+      
+      // Collections to clean up
+      const collections = ['tokens', 'sales', 'purchases', 'exchanges'];
+      
+      for (const collectionName of collections) {
+        try {
+          // Try with index first
+          const q = query(
+            collection(db, collectionName),
+            where('storeId', '==', selectedStore.id),
+            where('createdAt', '<', oneMonthAgoTimestamp)
+          );
+          
+          const snapshot = await getDocs(q);
+          const deletePromises = snapshot.docs.map(docSnap => 
+            deleteDoc(doc(db, collectionName, docSnap.id))
+          );
+          
+          if (deletePromises.length > 0) {
+            await Promise.all(deletePromises);
+            totalDeleted += deletePromises.length;
+            console.log(`Cleaned up ${deletePromises.length} old ${collectionName} records`);
+          }
+        } catch (indexError) {
+          if (indexError.message.includes('index')) {
+            console.log(`Index not ready for ${collectionName}, skipping cleanup for this collection`);
+            continue;
+          }
+          throw indexError;
+        }
+      }
+      
+      if (showToast) {
+        setToast({ 
+          show: true, 
+          message: `Cleaned up ${totalDeleted} old records (older than 1 month)`, 
+          type: 'success' 
+        });
+      }
+    } catch (error) {
+      console.error('Error cleaning up old data:', error);
+      if (showToast) {
+        setToast({ 
+          show: true, 
+          message: 'Error cleaning up old data', 
+          type: 'error' 
+        });
+      }
+    } finally {
+      setIsCleaning(false);
+    }
+  };
+
+  const handleManualCleanup = async () => {
+    await cleanupOldData(true);
+    
+    // Mark reminder as completed
+    const nextMonth = new Date();
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    localStorage.setItem('lastDataCleanupReminder', nextMonth.toISOString());
+    setShowReminder(false);
+  };
+
   useEffect(() => {
     const fetchAllData = async () => {
       if (!selectedStore) return;
+      
+      // Check for reminder
+      const shouldShowReminder = checkReminder();
+      if (shouldShowReminder) {
+        // Send WhatsApp notification
+        sendWhatsAppNotification();
+        // Create admin notification
+        createAdminNotification();
+      }
+      
+      // Clean up old data first
+      await cleanupOldData();
       
       // Fetch cash reserves
       const cashQuery = query(
@@ -60,22 +225,51 @@ function Adminfile() {
       );
       const tokensSnapshot = await getDocs(tokensQuery);
       let tokenTotal = 0;
+      let gtsTotal = 0;
+      let solderingTotal = 0;
+      let customTotal = 0;
       const tokenData = [];
+      const gtsData = [];
+      const solderingData = [];
+      const customData = [];
+      
       tokensSnapshot.forEach(docSnap => {
         const d = docSnap.data();
         const amount = parseFloat(d.amount) || 0;
-        tokenTotal += amount;
-        tokenData.push({
+        const purpose = d.purpose;
+        
+        const tokenRecord = {
           id: docSnap.id,
           name: d.name,
-          purpose: d.purpose,
+          purpose: purpose,
           amount: amount,
           date: d.date,
           tokenNo: d.tokenNo
-        });
+        };
+        
+        tokenTotal += amount;
+        tokenData.push(tokenRecord);
+        
+        if (purpose === 'GTS') {
+          gtsTotal += amount;
+          gtsData.push(tokenRecord);
+        } else if (purpose === 'SOLDERING') {
+          solderingTotal += amount;
+          solderingData.push(tokenRecord);
+        } else {
+          customTotal += amount;
+          customData.push(tokenRecord);
+        }
       });
+      
       setTokenAmount(tokenTotal);
       setTokenDetails(tokenData);
+      setGtsAmount(gtsTotal);
+      setSolderingAmount(solderingTotal);
+      setCustomAmount(customTotal);
+      setGtsTokens(gtsData);
+      setSolderingTokens(solderingData);
+      setCustomTokens(customData);
       
       // Fetch sales
       const salesQuery = query(
@@ -163,7 +357,45 @@ function Adminfile() {
         )}
         
         <div className="w-full max-w-4xl bg-white/90 rounded-2xl shadow-xl p-8 border border-yellow-100">
-          <h2 className="text-xl font-bold text-yellow-700 mb-6 text-center">Financial Management</h2>
+          {/* Data Cleanup Reminder */}
+          {showReminder && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="text-red-500">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-red-800">Data Cleanup Reminder</h3>
+                  <p className="text-red-700 text-sm">Your system has data older than 1 month that needs to be cleaned up. WhatsApp notification has been sent to 7207856531.</p>
+                </div>
+                <button
+                  onClick={() => setShowReminder(false)}
+                  className="text-red-500 hover:text-red-700"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
+          
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-bold text-yellow-700">Financial Management</h2>
+            <button
+              onClick={handleManualCleanup}
+              disabled={isCleaning}
+              className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${
+                isCleaning
+                  ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                  : 'bg-red-500 hover:bg-red-600 text-white'
+              }`}
+            >
+              {isCleaning ? 'Cleaning...' : 'Clean Old Data (1+ month)'}
+            </button>
+          </div>
           
           {/* Tabs */}
           <div className="flex gap-2 mb-6">
@@ -259,10 +491,75 @@ function Adminfile() {
           {/* Tokens Tab */}
           {activeTab === 'tokens' && (
             <div className="space-y-4">
+              {/* Token Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                <h3 className="font-bold text-green-800 mb-2">Token Revenue Summary</h3>
+                  <h3 className="font-bold text-green-800 mb-2">Total Tokens</h3>
                 <div className="text-xl font-bold text-green-900">₹{tokenAmount}</div>
-                <p className="text-sm text-green-700">Total from {tokenDetails.length} tokens</p>
+                  <p className="text-sm text-green-700">From {tokenDetails.length} tokens</p>
+                </div>
+                
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h3 className="font-bold text-blue-800 mb-2">GTS Tokens</h3>
+                  <div className="text-xl font-bold text-blue-900">₹{gtsAmount}</div>
+                  <p className="text-sm text-blue-700">From {gtsTokens.length} tokens</p>
+                </div>
+                
+                <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                  <h3 className="font-bold text-yellow-800 mb-2">Soldering Tokens</h3>
+                  <div className="text-xl font-bold text-yellow-900">₹{solderingAmount}</div>
+                  <p className="text-sm text-yellow-700">From {solderingTokens.length} tokens</p>
+                </div>
+                
+                <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                  <h3 className="font-bold text-purple-800 mb-2">Custom Tokens</h3>
+                  <div className="text-xl font-bold text-purple-900">₹{customAmount}</div>
+                  <p className="text-sm text-purple-700">From {customTokens.length} tokens</p>
+                </div>
+              </div>
+
+              {/* Token Type Tabs */}
+              <div className="flex gap-2 mb-4">
+                <button
+                  onClick={() => setTokenTab('all')}
+                  className={`px-4 py-2 rounded-lg font-semibold ${
+                    tokenTab === 'all'
+                      ? 'bg-green-500 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  All Tokens
+                </button>
+                <button
+                  onClick={() => setTokenTab('gts')}
+                  className={`px-4 py-2 rounded-lg font-semibold ${
+                    tokenTab === 'gts'
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  GTS Tokens
+                </button>
+                <button
+                  onClick={() => setTokenTab('soldering')}
+                  className={`px-4 py-2 rounded-lg font-semibold ${
+                    tokenTab === 'soldering'
+                      ? 'bg-yellow-500 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Soldering Tokens
+                </button>
+                <button
+                  onClick={() => setTokenTab('custom')}
+                  className={`px-4 py-2 rounded-lg font-semibold ${
+                    tokenTab === 'custom'
+                      ? 'bg-purple-500 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Custom Tokens
+                </button>
               </div>
               
               <div className="max-h-96 overflow-y-auto">
@@ -277,7 +574,34 @@ function Adminfile() {
                     </tr>
                   </thead>
                   <tbody>
-                    {tokenDetails.map((token) => (
+                    {tokenTab === 'all' && tokenDetails.map((token) => (
+                      <tr key={token.id} className="hover:bg-gray-50">
+                        <td className="border border-gray-300 px-3 py-2">{token.tokenNo}</td>
+                        <td className="border border-gray-300 px-3 py-2">{token.name}</td>
+                        <td className="border border-gray-300 px-3 py-2">{token.purpose}</td>
+                        <td className="border border-gray-300 px-3 py-2 font-semibold">₹{token.amount}</td>
+                        <td className="border border-gray-300 px-3 py-2">{token.date}</td>
+                      </tr>
+                    ))}
+                    {tokenTab === 'gts' && gtsTokens.map((token) => (
+                      <tr key={token.id} className="hover:bg-gray-50">
+                        <td className="border border-gray-300 px-3 py-2">{token.tokenNo}</td>
+                        <td className="border border-gray-300 px-3 py-2">{token.name}</td>
+                        <td className="border border-gray-300 px-3 py-2">{token.purpose}</td>
+                        <td className="border border-gray-300 px-3 py-2 font-semibold">₹{token.amount}</td>
+                        <td className="border border-gray-300 px-3 py-2">{token.date}</td>
+                      </tr>
+                    ))}
+                    {tokenTab === 'soldering' && solderingTokens.map((token) => (
+                      <tr key={token.id} className="hover:bg-gray-50">
+                        <td className="border border-gray-300 px-3 py-2">{token.tokenNo}</td>
+                        <td className="border border-gray-300 px-3 py-2">{token.name}</td>
+                        <td className="border border-gray-300 px-3 py-2">{token.purpose}</td>
+                        <td className="border border-gray-300 px-3 py-2 font-semibold">₹{token.amount}</td>
+                        <td className="border border-gray-300 px-3 py-2">{token.date}</td>
+                      </tr>
+                    ))}
+                    {tokenTab === 'custom' && customTokens.map((token) => (
                       <tr key={token.id} className="hover:bg-gray-50">
                         <td className="border border-gray-300 px-3 py-2">{token.tokenNo}</td>
                         <td className="border border-gray-300 px-3 py-2">{token.name}</td>
@@ -297,9 +621,9 @@ function Adminfile() {
             <div className="space-y-4">
               {/* Sales Summary Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                   <h3 className="font-bold text-blue-800 mb-2">Total Sales</h3>
-                  <div className="text-xl font-bold text-blue-900">₹{salesAmount}</div>
+                <div className="text-xl font-bold text-blue-900">₹{salesAmount}</div>
                   <p className="text-sm text-blue-700">From {salesDetails.length} sales</p>
                 </div>
                 

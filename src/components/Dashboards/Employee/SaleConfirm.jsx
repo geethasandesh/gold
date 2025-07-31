@@ -27,6 +27,17 @@ function SaleConfirm() {
   useEffect(() => {
     if (!selectedStore) navigate('/employee');
   }, [selectedStore, navigate]);
+
+  // Auto-hide toast after 2 seconds
+  useEffect(() => {
+    if (toast.show) {
+      const timer = setTimeout(() => {
+        setToast({ show: false, message: '', type: 'success' });
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [toast.show]);
  
   const localType = data.saleType === 'SILVER' ? 'LOCAL SILVER' : 'LOCAL GOLD';
   const bankType = data.saleType === 'SILVER' ? 'KAMAL SILVER' : 'BANK GOLD';

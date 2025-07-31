@@ -25,6 +25,17 @@ function PurchaseConfirm() {
   useEffect(() => {
     if (!selectedStore) navigate('/employee');
   }, [selectedStore, navigate]);
+
+  // Auto-hide toast after 2 seconds
+  useEffect(() => {
+    if (toast.show) {
+      const timer = setTimeout(() => {
+        setToast({ show: false, message: '', type: 'success' });
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [toast.show]);
  
   // Fetch employee name
   useState(() => {
@@ -62,7 +73,7 @@ function PurchaseConfirm() {
           let silverSalesTotal = 0;
          
                    allSalesSnapshot.forEach(docSnap => {
-            const d = docSnap.data();
+        const d = docSnap.data();
             const amount = parseFloat(d.amount) || 0;
             
             // Skip deduction records
@@ -371,34 +382,34 @@ function PurchaseConfirm() {
                          <div className="flex items-center gap-2 mb-3">
                            <span className="text-lg">🥇</span>
                            <span className="font-semibold text-gray-700">Gold Sales Available</span>
-                         </div>
-                         <div className="grid grid-cols-3 gap-2 text-sm">
-                           <div className="bg-white rounded-lg p-2 border border-yellow-200">
-                             <div className="text-xs text-gray-500">Available</div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-sm">
+                        <div className="bg-white rounded-lg p-2 border border-yellow-200">
+                          <div className="text-xs text-gray-500">Available</div>
                              <div className="font-bold text-blue-600">₹{availableGoldSales.toLocaleString()}</div>
-                           </div>
-                           <div className="bg-white rounded-lg p-2 border border-yellow-200">
-                             <div className="text-xs text-gray-500">Paying</div>
-                             <div className="font-bold text-red-600">₹{data.amount}</div>
-                           </div>
-                           <div className="bg-white rounded-lg p-2 border border-yellow-200">
-                             <div className="text-xs text-gray-500">Remaining</div>
+                        </div>
+                        <div className="bg-white rounded-lg p-2 border border-yellow-200">
+                          <div className="text-xs text-gray-500">Paying</div>
+                          <div className="font-bold text-red-600">₹{data.amount}</div>
+                        </div>
+                        <div className="bg-white rounded-lg p-2 border border-yellow-200">
+                          <div className="text-xs text-gray-500">Remaining</div>
                              <div className={`font-bold ${remainingGoldSales >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                ₹{remainingGoldSales.toLocaleString()}
-                             </div>
-                           </div>
-                         </div>
+                          </div>
+                        </div>
+                      </div>
                          {insufficient && (
-                           <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded-lg">
-                             <div className="text-red-700 text-sm font-semibold flex items-center gap-1">
-                               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                               </svg>
+                        <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded-lg">
+                          <div className="text-red-700 text-sm font-semibold flex items-center gap-1">
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
                                Insufficient gold sales amount!
-                             </div>
-                           </div>
-                         )}
-                       </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                      )}
 
                      {data.mainType === 'SILVER' && (
@@ -406,37 +417,37 @@ function PurchaseConfirm() {
                          <div className="flex items-center gap-2 mb-3">
                            <span className="text-lg">🥈</span>
                            <span className="font-semibold text-gray-700">Silver Sales Available</span>
-                         </div>
-                         <div className="grid grid-cols-3 gap-2 text-sm">
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-sm">
                            <div className="bg-white rounded-lg p-2 border border-gray-200">
-                             <div className="text-xs text-gray-500">Available</div>
+                          <div className="text-xs text-gray-500">Available</div>
                              <div className="font-bold text-blue-600">₹{availableSilverSales.toLocaleString()}</div>
-                           </div>
+                        </div>
                            <div className="bg-white rounded-lg p-2 border border-gray-200">
-                             <div className="text-xs text-gray-500">Paying</div>
-                             <div className="font-bold text-red-600">₹{data.amount}</div>
-                           </div>
+                          <div className="text-xs text-gray-500">Paying</div>
+                          <div className="font-bold text-red-600">₹{data.amount}</div>
+                        </div>
                            <div className="bg-white rounded-lg p-2 border border-gray-200">
-                             <div className="text-xs text-gray-500">Remaining</div>
+                          <div className="text-xs text-gray-500">Remaining</div>
                              <div className={`font-bold ${remainingSilverSales >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                ₹{remainingSilverSales.toLocaleString()}
-                             </div>
-                           </div>
-                         </div>
+                          </div>
+                        </div>
+                      </div>
                          {insufficient && (
-                           <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded-lg">
-                             <div className="text-red-700 text-sm font-semibold flex items-center gap-1">
-                               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                               </svg>
+                        <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded-lg">
+                          <div className="text-red-700 text-sm font-semibold flex items-center gap-1">
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
                                Insufficient silver sales amount!
-                             </div>
-                           </div>
-                         )}
-                       </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                      )}
-                   </div>
-                 )}
+                  </div>
+                )}
 
                 {/* Action Buttons */}
                 <div className="space-y-3">
