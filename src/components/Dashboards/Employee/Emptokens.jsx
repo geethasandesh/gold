@@ -271,6 +271,7 @@ function Emptokens() {
                       <div className="p-4">
                         <div className="text-center font-bold text-lg mb-1 text-yellow-800">SMDB</div>
                         <div className="text-center font-bold text-sm mb-1 text-yellow-800">Dilshuknagar, Hyderabad</div>
+                        <div className="text-center font-bold text-sm mb-1 text-yellow-800">TOKEN RECEIPT</div>
                         <div className="text-yellow-700 font-semibold mb-1">DETAILS:</div>
                         
                         <div className="flex justify-between mb-1 text-base">

@@ -199,6 +199,12 @@ function PurchaseConfirm() {
           <div style="font-size: 12px; font-weight: bold; margin-bottom: 8px;">
             Dilshuknagar, Hyderabad
           </div>
+          <div style="font-size: 12px; font-weight: bold; margin-bottom: 8px; text-align: center;">
+            ${data.mainType === 'GOLD' ? 'GOLD PURCHASE' : 'SILVER PURCHASE'}
+          </div>
+          <div style="font-size: 12px; font-weight: bold; margin-bottom: 8px; text-align: center;">
+            ${data.subType === 'KACHA_GOLD' ? 'KACHA GOLD' : data.subType === 'FINE_GOLD' ? 'FINE GOLD' : data.subType === 'KACHA_SILVER' ? 'KACHA SILVER' : 'FINE SILVER'}
+          </div>
           <div style="font-size: 12px; font-weight: bold; margin-bottom: 8px; text-align: left;">
             DETAILS:
           </div>

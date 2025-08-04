@@ -226,6 +226,9 @@ function ExchangeConfirm() {
         <div style="font-size: 12px; font-weight: bold; margin-bottom: 8px;">
           Dilshuknagar, Hyderabad
         </div>
+        <div style="font-size: 12px; font-weight: bold; margin-bottom: 8px; text-align: center;">
+          ${data.type === 'GOLD' ? 'GOLD EXCHANGE' : 'SILVER EXCHANGE'}
+        </div>
         <div style="font-size: 12px; font-weight: bold; margin-bottom: 8px; text-align: left;">
           DETAILS:
         </div>
