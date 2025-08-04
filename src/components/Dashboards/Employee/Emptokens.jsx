@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import Adminheader from './Employeeheader';
 import { db } from '../../../firebase';
 import { collection, addDoc, getDocs, serverTimestamp } from 'firebase/firestore';
-import { FaCheckCircle, FaExclamationCircle, FaUser, FaFileAlt, FaEdit, FaRupeeSign, FaPrint, FaFileSignature } from 'react-icons/fa';
+import { FaCheckCircle, FaExclamationCircle, FaUser, FaFileAlt, FaEdit, FaRupeeSign, FaPrint, FaFileSignature, FaChartBar } from 'react-icons/fa';
 import { useStore } from '../Admin/StoreContext';
 import { useNavigate } from 'react-router-dom';
+import DailyReports from './DailyReports';
  
 function Emptokens() {
   const [form, setForm] = useState({ name: '', purpose: 'GTS', amount: '' });
@@ -12,6 +13,7 @@ function Emptokens() {
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const [showReports, setShowReports] = useState(false);
   const navigate = useNavigate();
   const { selectedStore } = useStore();
   
@@ -63,7 +65,8 @@ function Emptokens() {
         storeName: selectedStore?.name,
         createdAt: serverTimestamp(),
       });
-      setPreview({ ...form, purpose: form.purpose === 'CUSTOM' ? customPurpose : form.purpose, tokenNo: tokenNumber, date: dateStr });
+      const currentTime = new Date().toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'});
+      setPreview({ ...form, purpose: form.purpose === 'CUSTOM' ? customPurpose : form.purpose, tokenNo: tokenNumber, date: dateStr, time: currentTime });
       setForm({ name: '', purpose: 'GTS', amount: '' });
       setCustomPurpose('');
       setToast({ show: true, message: 'Token generated successfully!', type: 'success' });
@@ -77,8 +80,8 @@ function Emptokens() {
     const printContents = document.getElementById('token-preview').innerHTML;
     const win = window.open('', '', 'height=600,width=500');
     win.document.write('<html><head><title>Token</title>');
-    win.document.write('<style>body{font-family:monospace;} .border-blue{border:2px solid #2563eb;padding:24px;width:400px;margin:auto;}</style>');
-    win.document.write('</head><body >');
+    win.document.write('<style>@page { margin: 0 !important; size: auto !important; } body { margin: 0 !important; padding: 0 !important; background: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } * { margin: 0 !important; padding: 0 !important; } #token-preview { border: 2px solid #000 !important; padding: 0 !important; width: 280px !important; margin: 0 auto !important; background: white !important; position: relative !important; top: 0 !important; left: 0 !important; right: auto !important; height: auto !important; } #token-preview > div { margin: 0 !important; padding: 15px !important; } .text-center{text-align:center;} .font-bold{font-weight:bold;} .font-semibold{font-weight:600;} .flex{display:flex;} .justify-between{justify-content:space-between;} .mb-2{margin-bottom:4px;} .mb-1{margin-bottom:2px;} .mb-3{margin-bottom:6px;} .mt-4{margin-top:16px;} .mt-2{margin-top:8px;} .w-20{width:80px;} .inline-block{display:inline-block;} .text-sm{font-size:11px;} .text-lg{font-size:15px;}</style>');
+    win.document.write('</head><body>');
     win.document.write(printContents);
     win.document.write('</body></html>');
     win.document.close();
@@ -102,14 +105,23 @@ function Emptokens() {
             {/* Token Creation Section */}
             <div className="space-y-8">
               <div className="bg-white rounded-3xl shadow-2xl p-8 border border-yellow-100">
-                <div className="flex items-center gap-4 mb-8">
-                  <div className="bg-gradient-to-r from-yellow-500 to-amber-500 rounded-2xl p-3">
-                    <FaFileSignature className="w-8 h-8 text-white" />
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-4">
+                    <div className="bg-gradient-to-r from-yellow-500 to-amber-500 rounded-2xl p-3">
+                      <FaFileSignature className="w-8 h-8 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-3xl font-bold text-gray-900">Create New Token</h2>
+                      <p className="text-gray-600 mt-1">Fill in the details below to generate a professional token</p>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="text-3xl font-bold text-gray-900">Create New Token</h2>
-                    <p className="text-gray-600 mt-1">Fill in the details below to generate a professional token</p>
-                  </div>
+                  <button
+                    onClick={() => setShowReports(true)}
+                    className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-6 py-3 rounded-xl font-semibold flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                  >
+                    <FaChartBar className="w-5 h-5" />
+                    Daily Reports
+                  </button>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-8">
@@ -255,17 +267,22 @@ function Emptokens() {
                   </div>
 
                   <div className="flex justify-center">
-                    <div id="token-preview" className="border-2 border-black p-8 w-[380px] bg-white relative rounded-2xl shadow-2xl transform rotate-1 hover:rotate-0 transition-transform duration-300" style={{fontFamily: 'monospace'}}>
-                      <div className="text-center font-bold text-lg mb-2 text-yellow-800">SRI GAYATRI ASSAYING CENTRE</div>
-                      <div className="mt-2 text-yellow-700 font-semibold">DETAILS:</div>
-                      <div className="mt-2 mb-2 text-gray-400">---------------------------------------------------------------------</div>
-                      <div className="flex justify-between mb-2 text-base">
-                        <span className="font-semibold">DATE: {preview.date}</span>
-                      </div>
-                      <div className="mt-4">
-                        <div className="flex mb-1"><span className="w-24 inline-block font-semibold">NAME</span>: {preview.name}</div>
-                        <div className="flex mb-1"><span className="w-24 inline-block font-semibold">PURPOSE</span>: {preview.purpose}</div>
-                        <div className="flex mb-1"><span className="w-24 inline-block font-semibold">AMOUNT</span>: ₹{preview.amount}</div>
+                    <div id="token-preview" className="p-0 w-[280px] bg-white relative shadow-2xl transform rotate-1 hover:rotate-0 transition-transform duration-300" style={{fontFamily: 'monospace'}}>
+                      <div className="p-4">
+                        <div className="text-center font-bold text-lg mb-1 text-yellow-800">SMDB</div>
+                        <div className="text-center font-bold text-sm mb-1 text-yellow-800">Dilshuknagar, Hyderabad</div>
+                        <div className="text-yellow-700 font-semibold mb-1">DETAILS:</div>
+                        
+                        <div className="flex justify-between mb-1 text-base">
+                          <span className="font-semibold">DATE: {preview.date}</span>
+                          <span className="font-semibold">TIME: {preview.time}</span>
+                        </div>
+                        <div className="mb-2">
+                          <div className="flex mb-1"><span className="w-20 inline-block font-semibold">NAME</span>: {preview.name}</div>
+                          <div className="flex mb-1"><span className="w-20 inline-block font-semibold">PURPOSE</span>: {preview.purpose}</div>
+                          <div className="flex mb-1"><span className="w-20 inline-block font-semibold">AMOUNT</span>: <span className="font-bold">₹{preview.amount}</span></div>
+                        </div>
+                        <div className="text-center text-yellow-700 font-semibold text-sm">THANK YOU VISIT AGAIN</div>
                       </div>
                     </div>
                   </div>
@@ -311,6 +328,14 @@ function Emptokens() {
             {toast.type === 'success' ? <FaCheckCircle className="w-6 h-6" /> : <FaExclamationCircle className="w-6 h-6" />}
             <span>{toast.message}</span>
           </div>
+        )}
+
+        {/* Daily Reports Modal */}
+        {showReports && (
+          <DailyReports 
+            transactionType="tokens" 
+            onClose={() => setShowReports(false)} 
+          />
         )}
       </div>
       

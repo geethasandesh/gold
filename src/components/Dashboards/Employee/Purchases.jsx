@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import Employeeheader from './Employeeheader';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../Admin/StoreContext';
+import { FaChartBar } from 'react-icons/fa';
+import DailyReports from './DailyReports';
 
 const purchaseTypes = [
   {
@@ -36,6 +38,7 @@ function Purchases() {
   const [fineAuto, setFineAuto] = useState('');
   const [amount, setAmount] = useState('');
   const [paymentType, setPaymentType] = useState('ACCOUNTS');
+  const [showReports, setShowReports] = useState(false);
   const navigate = useNavigate();
   
   const { selectedStore } = useStore();
@@ -124,18 +127,27 @@ function Purchases() {
           {/* Purchases Form Card */}
           <div className="bg-white rounded-2xl shadow-xl p-6 border border-yellow-100">
             {/* Header */}
-            <div className="flex items-center gap-3 mb-4">
-              <div className="bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl p-2">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m6 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" />
-                </svg>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl p-2">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m6 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Purchases</h2>
+                  <p className="text-gray-600 text-sm">
+                    Process {mainType.toLowerCase()} purchases with automatic calculations
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">Purchases</h2>
-                <p className="text-gray-600 text-sm">
-                  Process {mainType.toLowerCase()} purchases with automatic calculations
-                </p>
-              </div>
+              <button
+                onClick={() => setShowReports(true)}
+                className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-6 py-3 rounded-xl font-semibold flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+              >
+                <FaChartBar className="w-5 h-5" />
+                Daily Reports
+              </button>
             </div>
 
             {/* Purchase Type Selection */}
@@ -410,6 +422,14 @@ function Purchases() {
             </form>
           </div>
         </div>
+
+        {/* Daily Reports Modal */}
+        {showReports && (
+          <DailyReports 
+            transactionType="purchases" 
+            onClose={() => setShowReports(false)} 
+          />
+        )}
       </div>
     </>
   );

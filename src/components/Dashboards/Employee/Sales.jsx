@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import Employeeheader from './Employeeheader';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../Admin/StoreContext';
+import { FaChartBar } from 'react-icons/fa';
+import DailyReports from './DailyReports';
 
 function Sales() {
   const [saleType, setSaleType] = useState('GOLD');
@@ -13,6 +15,7 @@ function Sales() {
   });
   const [amount, setAmount] = useState('');
   const [selectedSource, setSelectedSource] = useState('LOCAL GOLD');
+  const [showReports, setShowReports] = useState(false);
   const navigate = useNavigate();
   
   const { selectedStore } = useStore();
@@ -81,20 +84,29 @@ function Sales() {
           {/* Sales Form Card */}
           <div className="bg-white rounded-2xl shadow-xl p-6 border border-yellow-100">
             {/* Header */}
-            <div className="flex items-center gap-3 mb-4">
-              <div className="bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl p-2">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                </svg>
-            </div>
-            <div>
-                <h2 className="text-2xl font-bold text-gray-900">
-                  {saleType === 'GOLD' ? 'Gold Sale' : 'Silver Sale'}
-                </h2>
-                <p className="text-gray-600 text-sm">
-                  Process {saleType.toLowerCase()} sales with automatic amount calculation
-                </p>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl p-2">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    {saleType === 'GOLD' ? 'Gold Sale' : 'Silver Sale'}
+                  </h2>
+                  <p className="text-gray-600 text-sm">
+                    Process {saleType.toLowerCase()} sales with automatic amount calculation
+                  </p>
+                </div>
               </div>
+              <button
+                onClick={() => setShowReports(true)}
+                className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-6 py-3 rounded-xl font-semibold flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+              >
+                <FaChartBar className="w-5 h-5" />
+                Daily Reports
+              </button>
             </div>
 
             {/* Sale Type Selection */}
@@ -310,10 +322,18 @@ function Sales() {
                   </svg>
                   Continue to Confirmation
               </button>
-            </div>
-          </form>
+                          </div>
+            </form>
           </div>
         </div>
+
+        {/* Daily Reports Modal */}
+        {showReports && (
+          <DailyReports 
+            transactionType="sales" 
+            onClose={() => setShowReports(false)} 
+          />
+        )}
       </div>
     </>
   );

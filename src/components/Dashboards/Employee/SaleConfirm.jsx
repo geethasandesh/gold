@@ -299,19 +299,19 @@ function SaleConfirm() {
  
   const printReceipt = () => {
     const currentDate = new Date().toLocaleDateString('en-GB');
-    const currentTime = new Date().toLocaleTimeString('en-GB');
+    const currentTime = new Date().toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'});
     
     // Create a temporary div for printing
     const printDiv = document.createElement('div');
     printDiv.innerHTML = `
-      <div style="
+      <div class="print-content" style="
         font-family: 'Courier New', monospace; 
         margin: 0; 
         font-size: 12px;
-        line-height: 1.6;
+        line-height: 1.4;
         background: white;
-        padding: 20px;
-        max-width: 300px;
+        padding: 0;
+        width: 280px;
         margin: 0 auto;
         text-align: center;
         position: absolute;
@@ -319,32 +319,33 @@ function SaleConfirm() {
         left: 0;
         right: 0;
         z-index: 9999;
+        border: 2px solid #000;
       ">
-        <div style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">
-          ${selectedStore?.name}
-        </div>
-        <div style="font-size: 14px; margin-bottom: 15px;">
-          Sale Receipt
-        </div>
-        <div style="margin-bottom: 15px;">
-          Date: ${currentDate} | Time: ${currentTime}
-        </div>
-        
-        <div style="text-align: left; margin-bottom: 15px;">
-          <div style="margin: 3px 0;">Transaction Type: ${data.saleType} SALE</div>
-          <div style="margin: 3px 0;">Customer Name: ${data.name}</div>
-          <div style="margin: 3px 0;">Weight: ${data.weight} gms</div>
-          <div style="margin: 3px 0;">Rate: ₹${data.rate}/gram</div>
-          <div style="margin: 3px 0;">Amount: ₹${data.amount}</div>
-          <div style="margin: 3px 0;">Payment Mode: ${data.mode === 'CASH' ? '💵 Cash' : '💳 Online'}</div>
-          <div style="margin: 3px 0;">Payment Source: ${selectedSource}</div>
-          <div style="margin: 3px 0;">Employee: ${employee}</div>
-          <div style="margin: 3px 0;">Store: ${selectedStore?.name}</div>
-        </div>
-        
-        <div style="margin-top: 20px; font-size: 11px;">
-          <div>Thank you for your business!</div>
-          <div style="margin-top: 5px;">Generated on: ${currentDate} at ${currentTime}</div>
+        <div style="padding: 15px;">
+          <div style="font-size: 16px; font-weight: bold; margin-bottom: 8px;">
+            SMDB
+          </div>
+          <div style="font-size: 12px; font-weight: bold; margin-bottom: 8px;">
+            Dilshuknagar, Hyderabad
+          </div>
+          <div style="font-size: 12px; font-weight: bold; margin-bottom: 8px; text-align: left;">
+            DETAILS:
+          </div>
+          
+          <div style="text-align: left; margin-bottom: 8px;">
+            <div style="display: flex; justify-content: space-between; margin: 2px 0;">
+              <span style="font-weight: bold;">DATE: ${currentDate}</span>
+              <span style="font-weight: bold;">TIME: ${currentTime}</span>
+            </div>
+            <div style="margin: 2px 0;"><span style="font-weight: bold; display: inline-block; width: 80px;">NAME</span>: ${data.name}</div>
+            <div style="margin: 2px 0;"><span style="font-weight: bold; display: inline-block; width: 80px;">WEIGHT</span>: ${data.weight} gms</div>
+            <div style="margin: 2px 0;"><span style="font-weight: bold; display: inline-block; width: 80px;">RATE</span>: ₹${data.rate}</div>
+            <div style="margin: 2px 0;"><span style="font-weight: bold; display: inline-block; width: 80px;">AMOUNT</span>: <span style="font-weight: bold;">₹${data.amount}</span></div>
+          </div>
+          
+          <div style="margin-top: 8px; font-size: 11px; font-weight: bold; text-align: center;">
+            THANK YOU VISIT AGAIN
+          </div>
         </div>
       </div>
     `;
@@ -367,6 +368,45 @@ function SaleConfirm() {
       }
     }
     
+    // Add print-specific styles to remove margins and padding
+    const style = document.createElement('style');
+    style.textContent = `
+      @media print {
+        @page {
+          margin: 0 !important;
+          size: auto !important;
+        }
+        body {
+          margin: 0 !important;
+          padding: 0 !important;
+          background: white !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        * {
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+        .print-content {
+          margin: 0 !important;
+          padding: 0 !important;
+          border: 2px solid #000 !important;
+          box-shadow: none !important;
+          position: relative !important;
+          top: 0 !important;
+          left: 0 !important;
+          right: auto !important;
+          width: 280px !important;
+          height: auto !important;
+        }
+        .print-content > div {
+          margin: 0 !important;
+          padding: 15px !important;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+    
     // Print
     window.print();
     
@@ -385,8 +425,9 @@ function SaleConfirm() {
         }
       }
       
-      // Remove the print div
+      // Remove the print div and style
       document.body.removeChild(printDiv);
+      document.head.removeChild(style);
     }, 1000);
   };
 

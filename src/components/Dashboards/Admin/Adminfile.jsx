@@ -91,7 +91,7 @@ function Adminfile() {
       console.error('Error creating admin notification:', error);
     }
   };
-
+  
   // Navigate to admin dashboard if no store is selected
   useEffect(() => {
     if (!selectedStore) navigate('/admin');
@@ -293,7 +293,6 @@ function Adminfile() {
         if (d.isDeduction) {
           return;
         }
-        
         const saleRecord = {
           id: docSnap.id,
           name: d.name,
@@ -337,7 +336,6 @@ function Adminfile() {
       return () => clearTimeout(timer);
     }
   }, [toast]);
-
   return (
     <>
       <Adminheader />

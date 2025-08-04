@@ -35,7 +35,7 @@ function Ordermanage() {
       items: [
         { metal: 'Gold', ornament: 'Necklace', quantity: 1, weight: '' },
       ],
-      showImageModal: false,
+      images: [],
     },
   ]);
   const [search, setSearch] = useState('');
@@ -69,7 +69,6 @@ function Ordermanage() {
   const customer = filteredOrders[activeTab]?.customer || { name: '', contact: '' };
   const receiver = filteredOrders[activeTab]?.receiver || '';
   const items = filteredOrders[activeTab]?.items || [];
-  const showImageModal = filteredOrders[activeTab]?.showImageModal;
  
   const handleCustomerChange = (e) => {
     const { name, value } = e.target;
@@ -80,6 +79,26 @@ function Ordermanage() {
     const newItems = items.map((item, i) => (i === idx ? { ...item, [field]: value } : item));
     updateOrder(activeTab, { items: newItems });
   };
+
+  const handleImageUpload = (event) => {
+    const files = Array.from(event.target.files);
+    const imageFiles = files.map(file => ({
+      file: file,
+      imageUrl: URL.createObjectURL(file),
+      name: file.name
+    }));
+    
+    const currentImages = filteredOrders[activeTab]?.images || [];
+    updateOrder(activeTab, { images: [...currentImages, ...imageFiles] });
+  };
+
+  const removeImage = (imageIndex) => {
+    const currentImages = filteredOrders[activeTab]?.images || [];
+    const newImages = currentImages.filter((_, index) => index !== imageIndex);
+    updateOrder(activeTab, { images: newImages });
+  };
+
+
  
   const addItem = () => {
     updateOrder(activeTab, {
@@ -98,10 +117,11 @@ function Ordermanage() {
   };
  
   const [orderSent, setOrderSent] = useState(false);
-  const [notifyToast, setNotifyToast] = useState(false);
  
   const handleSend = () => {
     const orderId = filteredOrders[activeTab].orderId;
+    const currentImages = filteredOrders[activeTab]?.images || [];
+    
     let message = `*New Order*\nOrder ID: ${orderId}\n`;
     if (customer.name) message += `Name: ${customer.name}\n`;
     if (customer.contact) message += `Contact: ${customer.contact}\n`;
@@ -111,13 +131,51 @@ function Ordermanage() {
       message += `\n${idx + 1}. ${item.metal} - ${ornamentLabel} x${item.quantity}`;
       if (item.weight) message += ` (${item.weight} gms)`;
     });
+    
+    if (currentImages.length > 0) {
+      message += `\n\n📸 Reference Images: ${currentImages.length} image(s) attached`;
+      message += `\nPlease check the images for reference details.`;
+    }
+    
     const encoded = encodeURIComponent(message);
-    // Send to receiver number
-    const receiverNumber = receiver.replace(/\D/g, '');
-    if (receiverNumber.length < 10) return; // basic validation
-    window.open(`https://wa.me/91${receiverNumber}?text=${encoded}`, '_blank');
+    
+    // Check if it's a group ID or individual number
+    const receiverInput = receiver.trim();
+    let whatsappUrl;
+    
+    // Group IDs are typically long alphanumeric strings (22+ characters)
+    // Individual numbers are typically 10-15 digits
+    if (receiverInput.length > 15 && /^[a-zA-Z0-9]+$/.test(receiverInput)) {
+      // It's likely a group ID - send to group
+      // Use the same format as individual numbers but with group ID
+      whatsappUrl = `https://wa.me/${receiverInput}?text=${encoded}`;
+    } else {
+      // It's an individual number - add country code if needed
+      const receiverNumber = receiverInput.replace(/\D/g, '');
+      if (receiverNumber.length < 10) return; // basic validation
+      whatsappUrl = `https://wa.me/91${receiverNumber}?text=${encoded}`;
+    }
+    
+    // Open WhatsApp with pre-filled message
+    window.open(whatsappUrl, '_blank');
     setOrderSent(true);
+    
+    // For groups, show simple confirmation
+    if (receiverInput.length > 15 && /^[a-zA-Z0-9]+$/.test(receiverInput)) {
+      setTimeout(() => {
+        alert(`Order sent to WhatsApp group!\n\nGroup ID: ${receiverInput}\n\nIf the message is not pre-filled, please check your WhatsApp.`);
+      }, 1000);
+    }
+    
+          // Show instructions for manual image attachment if images exist
+      if (currentImages.length > 0) {
+        setTimeout(() => {
+          alert(`Order text sent! Please manually attach the ${currentImages.length} reference image(s) in WhatsApp.\n\nTo get group ID: Open WhatsApp group → Group info → Scroll down to find the group ID (e.g., ESie4aulBDyId1KpkpiH10).`);
+        }, 1000);
+      }
   };
+
+
  
   const handleNotify = () => {
     const orderId = filteredOrders[activeTab].orderId;
@@ -126,19 +184,35 @@ function Ordermanage() {
     if (customerName) reminderMessage += `\nCustomer: ${customerName}`;
     reminderMessage += `\nThis is a reminder to process the above order as soon as possible.`;
     const encoded = encodeURIComponent(reminderMessage);
-    const receiverNumber = receiver.replace(/\D/g, '');
-    if (receiverNumber.length < 10) return;
-    window.open(`https://wa.me/91${receiverNumber}?text=${encoded}`, '_blank');
+    
+    // Check if it's a group ID or individual number (same logic as handleSend)
+    const receiverInput = receiver.trim();
+    let whatsappUrl;
+    
+    // Group IDs are typically long alphanumeric strings (22+ characters)
+    // Individual numbers are typically 10-15 digits
+    if (receiverInput.length > 15 && /^[a-zA-Z0-9]+$/.test(receiverInput)) {
+      // It's likely a group ID - send to group
+      // Use the same format as individual numbers but with group ID
+      whatsappUrl = `https://wa.me/${receiverInput}?text=${encoded}`;
+    } else {
+      // It's an individual number - add country code if needed
+      const receiverNumber = receiverInput.replace(/\D/g, '');
+      if (receiverNumber.length < 10) return; // basic validation
+      whatsappUrl = `https://wa.me/91${receiverNumber}?text=${encoded}`;
+    }
+    
+    window.open(whatsappUrl, '_blank');
+    
+    // For groups, show simple confirmation
+    if (receiverInput.length > 15 && /^[a-zA-Z0-9]+$/.test(receiverInput)) {
+      setTimeout(() => {
+        alert(`Reminder sent to WhatsApp group!\n\nGroup ID: ${receiverInput}\n\nIf the message is not pre-filled, please check your WhatsApp.`);
+      }, 1000);
+    }
   };
  
-  const handleDownload = (file, idx) => {
-    const link = document.createElement('a');
-    link.href = file.imageUrl;
-    link.download = file.image ? file.image.name : `reference-image-${idx+1}`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+
  
   // Tab management
   const addTab = () => {
@@ -151,6 +225,7 @@ function Ordermanage() {
         items: [
           { metal: 'Gold', ornament: 'Necklace', quantity: 1, weight: '' },
         ],
+        images: [],
         showImageModal: false,
       },
     ]);
@@ -179,9 +254,7 @@ function Ordermanage() {
     setConfirmModal({ open: false, type: '', idx: null });
   };
  
-  const closeImageModal = () => {
-    updateOrder(activeTab, { showImageModal: false });
-  };
+
  
   const [showTable, setShowTable] = useState(false);
   const [tableFilters, setTableFilters] = useState({ orderId: '', name: '', receiver: '' });
@@ -253,7 +326,7 @@ function Ordermanage() {
                       (!tableFilters.name || (order.customer.name || '').toLowerCase().includes(tableFilters.name.toLowerCase())) &&
                       (!tableFilters.receiver || (order.receiver || '').toLowerCase().includes(tableFilters.receiver.toLowerCase()))
                     )
-                    .map((order, idx) => (
+                    .map((order) => (
                       <tr key={order.orderId} className="hover:bg-blue-50 transition">
                         <td className="px-4 py-2 font-mono text-blue-900">{order.orderId}</td>
                         <td className="px-4 py-2">{order.customer.name}</td>
@@ -353,14 +426,12 @@ function Ordermanage() {
                   placeholder="Contact (optional)"
                 />
                 <input
-                  type="tel"
+                  type="text"
                   name="receiver"
                   value={receiver}
                   onChange={handleReceiverChange}
                   className="flex-1 px-4 py-3 rounded-xl bg-blue-50 border-none focus:ring-2 focus:ring-blue-400 text-blue-900 placeholder:text-blue-300 text-base transition"
-                  placeholder="Receiver Number (required)"
-                  maxLength={10}
-                  pattern="[0-9]{10}"
+                  placeholder="WhatsApp Number or Group ID (e.g., ESie4aulBDyId1KpkpiH10)"
                   required
                 />
               </div>
@@ -440,12 +511,69 @@ function Ordermanage() {
               >
                 <FaPlus /> Add Item
               </button>
+
+              {/* Image Upload Section */}
+              <div className="mb-8 p-5 rounded-2xl border border-blue-100 bg-blue-50/60 shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-lg">📸</span>
+                  <h3 className="font-semibold text-blue-700 text-lg">Reference Images</h3>
+                </div>
+                
+                {/* Image Upload Input */}
+                <div className="mb-4">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    id="image-upload"
+                  />
+                  <label
+                    htmlFor="image-upload"
+                    className="flex items-center gap-2 px-4 py-3 rounded-xl bg-blue-100 hover:bg-blue-200 text-blue-700 font-semibold cursor-pointer transition text-base shadow"
+                  >
+                    <FaPlus /> Upload Reference Images
+                  </label>
+                </div>
+
+                {/* Display Uploaded Images */}
+                {filteredOrders[activeTab]?.images && filteredOrders[activeTab].images.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {filteredOrders[activeTab].images.map((image, index) => (
+                      <div key={index} className="relative group">
+                        <img
+                          src={image.imageUrl}
+                          alt={`Reference ${index + 1}`}
+                          className="w-full h-32 object-cover rounded-lg border border-blue-200"
+                        />
+                        <button
+                          onClick={() => removeImage(index)}
+                          className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Remove image"
+                        >
+                          <FaTimes className="w-3 h-3" />
+                        </button>
+                        <div className="text-xs text-blue-600 mt-1 truncate">{image.name}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {(!filteredOrders[activeTab]?.images || filteredOrders[activeTab].images.length === 0) && (
+                  <div className="text-center py-8 text-blue-400">
+                    <div className="text-4xl mb-2">📸</div>
+                    <p className="text-sm">No reference images uploaded yet</p>
+                    <p className="text-xs mt-1">Upload images to help with order details</p>
+                  </div>
+                )}
+              </div>
               {filteredOrders.length > 0 && (!orderSent ? (
                 <button
                   type="button"
                   onClick={handleSend}
-                  className={`w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl font-bold text-xl shadow-lg transition mt-2 ${receiver.replace(/\D/g, '').length < 10 ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 text-white'}`}
-                  disabled={receiver.replace(/\D/g, '').length < 10}
+                  className={`w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl font-bold text-xl shadow-lg transition mt-2 ${receiver.trim().length < 5 ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 text-white'}`}
+                  disabled={receiver.trim().length < 5}
                 >
                   <FaWhatsapp className="w-7 h-7" /> Send Order to WhatsApp
                 </button>
@@ -458,12 +586,13 @@ function Ordermanage() {
                   <FaWhatsapp className="w-6 h-6" /> Remind/Notify about this Order
                 </button>
               ))}
-              {notifyToast && (
-                <div className="fixed top-6 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-xl shadow-lg z-[9999] flex items-center gap-2 text-white bg-blue-600 animate-fadeIn">
-                  <FaTimes className="w-5 h-5" /> Order reminder notification sent!
-                </div>
-              )}
-              <div className="text-xs text-blue-500 mt-4">*After sending, please upload reference images manually in WhatsApp if any.</div>
+
+              <div className="text-xs text-blue-500 mt-4">
+                *For automatic sending with images, you need to use WhatsApp Business API or third-party services. 
+                Currently, images need to be manually attached in WhatsApp after the text is sent.
+                <br />
+                <strong>Tip:</strong> For group IDs, use the format: ESie4aulBDyId1KpkpiH10 (found in group info)
+              </div>
             </div>
           </>
         )}
