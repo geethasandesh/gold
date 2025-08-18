@@ -263,6 +263,7 @@ function Purchases() {
                     min="0" 
                     className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 text-base transition-all duration-200 bg-gray-50 focus:bg-white" 
                     placeholder="Enter weight" 
+                    style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
                   />
                 </div>
               </div>
@@ -291,6 +292,7 @@ function Purchases() {
                         step="0.01" 
                         className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 text-base transition-all duration-200 bg-gray-50 focus:bg-white" 
                         placeholder="Enter touch %" 
+                        style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
                       />
                     </div>
                   </div>
@@ -314,6 +316,7 @@ function Purchases() {
                         step="0.01" 
                         className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 text-base transition-all duration-200 bg-gray-50 focus:bg-white" 
                         placeholder="Enter less value" 
+                        style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
                       />
                     </div>
                   </div>
@@ -362,6 +365,7 @@ function Purchases() {
                       min="0" 
                       className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 text-base transition-all duration-200 bg-gray-50 focus:bg-white" 
                       placeholder="Enter rate" 
+                      style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
                     />
                   </div>
                 </div>
@@ -431,6 +435,19 @@ function Purchases() {
           />
         )}
       </div>
+      
+      {/* Remove number input spinners */}
+      <style>{`
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        
+        input[type="number"] {
+          -moz-appearance: textfield;
+        }
+      `}</style>
     </>
   );
 }

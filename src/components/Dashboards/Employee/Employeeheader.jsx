@@ -17,6 +17,8 @@ function stringToInitials(nameOrEmail) {
  
 function Employeeheader() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showOrderNotification, setShowOrderNotification] = useState(false);
+  const [hasSeenOrderNotification, setHasSeenOrderNotification] = useState(false);
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const navigate = useNavigate();
@@ -40,12 +42,32 @@ function Employeeheader() {
   }, []);
  
   const handleLogout = async () => {
+    // If user hasn't seen the order notification yet, show it first
+    if (!hasSeenOrderNotification) {
+      setShowLogoutModal(false);
+      setShowOrderNotification(true);
+      return;
+    }
+   
+    // If user has already seen the notification, proceed with logout
     try {
       await signOut(auth);
       navigate('/');
     } catch (error) {
       console.error('Error logging out:', error);
     }
+  };
+ 
+  const handleVisitOrderManagement = () => {
+    setShowOrderNotification(false);
+    setHasSeenOrderNotification(true);
+    navigate('/employee/order-management');
+  };
+ 
+  const handleCancelOrderNotification = () => {
+    setShowOrderNotification(false);
+    setHasSeenOrderNotification(true);
+    setShowLogoutModal(true); // Show logout modal after canceling order notification
   };
  
   return (
@@ -123,6 +145,37 @@ function Employeeheader() {
         </div>
       </div>
  
+      {/* Order Management Notification Modal */}
+      {showOrderNotification && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          <div className="absolute inset-0 backdrop-blur-sm transition-opacity duration-300" onClick={handleCancelOrderNotification}></div>
+          <div className="relative bg-white rounded-2xl p-8 shadow-2xl max-w-md w-full mx-4 animate-fadeIn">
+            <div className="flex flex-col items-center">
+              <FaClipboardList className="w-12 h-12 text-blue-500 mb-2" />
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Check Order Management</h3>
+              <p className="text-gray-600 mb-6 text-center">
+                Before logging out, please visit the Order Management page to check for any pending orders or tasks.
+              </p>
+              <div className="flex w-full justify-center space-x-3">
+                <button
+                  onClick={handleCancelOrderNotification}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleVisitOrderManagement}
+                  className="px-4 py-2 text-white bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors font-medium shadow flex items-center gap-2"
+                >
+                  <FaClipboardList className="w-4 h-4" />
+                  Visit Orders
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+ 
       {/* Logout Confirmation Modal */}
       {showLogoutModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50">
@@ -162,6 +215,4 @@ function Employeeheader() {
     </header>
   );
 }
- 
 export default Employeeheader;
- 

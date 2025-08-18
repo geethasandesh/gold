@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Employeeheader from './Employeeheader';
-import { FaPlus, FaTrash, FaWhatsapp, FaTimes } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaWhatsapp, FaTimes, FaEdit, FaSave, FaEye } from 'react-icons/fa';
  
 const ORNAMENT_TYPES = [
   'Necklace',
@@ -14,6 +14,19 @@ const ORNAMENT_TYPES = [
   'Nose Pin',
   'Other',
 ];
+
+const ORDER_STATUS = {
+  PENDING: 'Pending',
+  IN_PROGRESS: 'Work in Progress',
+  DELAYED: 'Work in Delay',
+  COMPLETED: 'Work Completed'
+};
+
+const ITEM_STATUS = {
+  WITH_WORKER: 'Items with Worker',
+  WITH_DEPARTMENT: 'Items with Department',
+  DELIVERED: 'Items delivered to customer'
+};
  
 // Helper to generate the next available order ID in ascending order
 function getNextOrderId(orders) {
@@ -26,19 +39,42 @@ function getNextOrderId(orders) {
 }
  
 function Ordermanage() {
-  // Tabs state
   const [orders, setOrders] = useState([
     {
       orderId: 'ORD-00001',
-      customer: { name: '', contact: '' },
-      receiver: '',
+      customer: { name: '', contact: '', address: '' },
+      subQuantity: '',
+      totalWeight: '',
+      advance: '',
+      requestedDeliveryDate: '',
+      orderWeightage: '',
+      orderPeopleContact: '', // Contact number for order people
       items: [
-        { metal: 'Gold', ornament: 'Necklace', quantity: 1, weight: '' },
+        { 
+          sno: 1,
+          ornamentType: 'Necklace', 
+          weight: '', 
+          advance: '', 
+          customerNotes: '',
+          photo: null,
+          status: ORDER_STATUS.PENDING,
+          itemStatus: ITEM_STATUS.WITH_WORKER,
+          notes: '',
+          isSubmitted: false
+        },
       ],
-      images: [],
+      orderStatus: ORDER_STATUS.PENDING,
+      isPlaced: false,
+      reminderActive: false, // Track if reminder is active
+      reminderCount: 0, // Count of reminders sent
     },
   ]);
+
+  const [activeTab, setActiveTab] = useState(0);
   const [search, setSearch] = useState('');
+  const [showTable, setShowTable] = useState(false);
+  const [reminderIntervals, setReminderIntervals] = useState({}); // Store interval IDs
+
   // Filtered orders based on search
   const filteredOrders = orders.filter(order => {
     if (!search.trim()) return true;
@@ -49,8 +85,8 @@ function Ordermanage() {
       (order.customer.contact && order.customer.contact.toLowerCase().includes(s))
     );
   });
+
   // Adjust activeTab to always be in range of filteredOrders
-  const [activeTab, setActiveTab] = useState(0);
   React.useEffect(() => {
     if (activeTab >= filteredOrders.length) setActiveTab(0);
   }, [filteredOrders.length]);
@@ -61,585 +97,918 @@ function Ordermanage() {
     setOrders((prev) => prev.map((o) => (o.orderId === orderId ? { ...o, ...newOrder } : o)));
   };
  
-  const handleReceiverChange = (e) => {
-    updateOrder(activeTab, { receiver: e.target.value });
+  const currentOrder = filteredOrders[activeTab] || {};
+
+  const handleCustomerChange = (field, value) => {
+    updateOrder(activeTab, { 
+      customer: { ...currentOrder.customer, [field]: value } 
+    });
   };
- 
-  // Handlers for the active order (from filtered list)
-  const customer = filteredOrders[activeTab]?.customer || { name: '', contact: '' };
-  const receiver = filteredOrders[activeTab]?.receiver || '';
-  const items = filteredOrders[activeTab]?.items || [];
- 
-  const handleCustomerChange = (e) => {
-    const { name, value } = e.target;
-    updateOrder(activeTab, { customer: { ...customer, [name]: value } });
+
+  const handleOrderFieldChange = (field, value) => {
+    updateOrder(activeTab, { [field]: value });
   };
- 
+
   const handleItemChange = (idx, field, value) => {
-    const newItems = items.map((item, i) => (i === idx ? { ...item, [field]: value } : item));
+    const newItems = currentOrder.items.map((item, i) => 
+      i === idx ? { ...item, [field]: value } : item
+    );
     updateOrder(activeTab, { items: newItems });
   };
 
-  const handleImageUpload = (event) => {
-    const files = Array.from(event.target.files);
-    const imageFiles = files.map(file => ({
-      file: file,
-      imageUrl: URL.createObjectURL(file),
-      name: file.name
-    }));
-    
-    const currentImages = filteredOrders[activeTab]?.images || [];
-    updateOrder(activeTab, { images: [...currentImages, ...imageFiles] });
-  };
-
-  const removeImage = (imageIndex) => {
-    const currentImages = filteredOrders[activeTab]?.images || [];
-    const newImages = currentImages.filter((_, index) => index !== imageIndex);
-    updateOrder(activeTab, { images: newImages });
-  };
-
-
- 
   const addItem = () => {
+    const newSno = currentOrder.items.length + 1;
     updateOrder(activeTab, {
       items: [
-        ...items,
-        { metal: 'Gold', ornament: 'Necklace', quantity: 1, weight: '' },
+        ...currentOrder.items,
+        { 
+          sno: newSno,
+          ornamentType: 'Necklace', 
+          weight: '', 
+          advance: '', 
+          customerNotes: '',
+          photo: null,
+          status: ORDER_STATUS.PENDING,
+          itemStatus: ITEM_STATUS.WITH_WORKER,
+          notes: '',
+          isSubmitted: false
+        },
       ],
     });
   };
- 
-  // Confirmation modal state
-  const [confirmModal, setConfirmModal] = useState({ open: false, type: '', idx: null });
- 
+
   const removeItem = (idx) => {
-    setConfirmModal({ open: true, type: 'item', idx });
+    const newItems = currentOrder.items.filter((_, i) => i !== idx);
+    // Renumber the items
+    const renumberedItems = newItems.map((item, i) => ({ ...item, sno: i + 1 }));
+    updateOrder(activeTab, { items: renumberedItems });
   };
  
-  const [orderSent, setOrderSent] = useState(false);
- 
-  const handleSend = () => {
-    const orderId = filteredOrders[activeTab].orderId;
-    const currentImages = filteredOrders[activeTab]?.images || [];
-    
-    let message = `*New Order*\nOrder ID: ${orderId}\n`;
-    if (customer.name) message += `Name: ${customer.name}\n`;
-    if (customer.contact) message += `Contact: ${customer.contact}\n`;
-    message += `Items:`;
-    items.forEach((item, idx) => {
-      let ornamentLabel = item.ornament === 'Other' && item.otherDetails ? item.otherDetails : item.ornament;
-      message += `\n${idx + 1}. ${item.metal} - ${ornamentLabel} x${item.quantity}`;
-      if (item.weight) message += ` (${item.weight} gms)`;
-    });
-    
-    if (currentImages.length > 0) {
-      message += `\n\n📸 Reference Images: ${currentImages.length} image(s) attached`;
-      message += `\nPlease check the images for reference details.`;
-    }
-    
-    const encoded = encodeURIComponent(message);
-    
-    // Check if it's a group ID or individual number
-    const receiverInput = receiver.trim();
-    let whatsappUrl;
-    
-    // Group IDs are typically long alphanumeric strings (22+ characters)
-    // Individual numbers are typically 10-15 digits
-    if (receiverInput.length > 15 && /^[a-zA-Z0-9]+$/.test(receiverInput)) {
-      // It's likely a group ID - send to group
-      // Use the same format as individual numbers but with group ID
-      whatsappUrl = `https://wa.me/${receiverInput}?text=${encoded}`;
-    } else {
-      // It's an individual number - add country code if needed
-      const receiverNumber = receiverInput.replace(/\D/g, '');
-      if (receiverNumber.length < 10) return; // basic validation
-      whatsappUrl = `https://wa.me/91${receiverNumber}?text=${encoded}`;
-    }
-    
-    // Open WhatsApp with pre-filled message
-    window.open(whatsappUrl, '_blank');
-    setOrderSent(true);
-    
-    // For groups, show simple confirmation
-    if (receiverInput.length > 15 && /^[a-zA-Z0-9]+$/.test(receiverInput)) {
-      setTimeout(() => {
-        alert(`Order sent to WhatsApp group!\n\nGroup ID: ${receiverInput}\n\nIf the message is not pre-filled, please check your WhatsApp.`);
-      }, 1000);
-    }
-    
-          // Show instructions for manual image attachment if images exist
-      if (currentImages.length > 0) {
-        setTimeout(() => {
-          alert(`Order text sent! Please manually attach the ${currentImages.length} reference image(s) in WhatsApp.\n\nTo get group ID: Open WhatsApp group → Group info → Scroll down to find the group ID (e.g., ESie4aulBDyId1KpkpiH10).`);
-        }, 1000);
-      }
-  };
-
-
- 
-  const handleNotify = () => {
-    const orderId = filteredOrders[activeTab].orderId;
-    const customerName = customer.name || '';
-    let reminderMessage = `*Order Reminder*\nOrder ID: ${orderId}`;
-    if (customerName) reminderMessage += `\nCustomer: ${customerName}`;
-    reminderMessage += `\nThis is a reminder to process the above order as soon as possible.`;
-    const encoded = encodeURIComponent(reminderMessage);
-    
-    // Check if it's a group ID or individual number (same logic as handleSend)
-    const receiverInput = receiver.trim();
-    let whatsappUrl;
-    
-    // Group IDs are typically long alphanumeric strings (22+ characters)
-    // Individual numbers are typically 10-15 digits
-    if (receiverInput.length > 15 && /^[a-zA-Z0-9]+$/.test(receiverInput)) {
-      // It's likely a group ID - send to group
-      // Use the same format as individual numbers but with group ID
-      whatsappUrl = `https://wa.me/${receiverInput}?text=${encoded}`;
-    } else {
-      // It's an individual number - add country code if needed
-      const receiverNumber = receiverInput.replace(/\D/g, '');
-      if (receiverNumber.length < 10) return; // basic validation
-      whatsappUrl = `https://wa.me/91${receiverNumber}?text=${encoded}`;
-    }
-    
-    window.open(whatsappUrl, '_blank');
-    
-    // For groups, show simple confirmation
-    if (receiverInput.length > 15 && /^[a-zA-Z0-9]+$/.test(receiverInput)) {
-      setTimeout(() => {
-        alert(`Reminder sent to WhatsApp group!\n\nGroup ID: ${receiverInput}\n\nIf the message is not pre-filled, please check your WhatsApp.`);
-      }, 1000);
-    }
-  };
- 
-
- 
-  // Tab management
   const addTab = () => {
     setOrders((prev) => [
       ...prev,
       {
         orderId: getNextOrderId(prev),
-        customer: { name: '', contact: '' },
-        receiver: '',
+        customer: { name: '', contact: '', address: '' },
+        subQuantity: '',
+        totalWeight: '',
+        advance: '',
+        requestedDeliveryDate: '',
+        orderWeightage: '',
+        orderPeopleContact: '',
         items: [
-          { metal: 'Gold', ornament: 'Necklace', quantity: 1, weight: '' },
+          { 
+            sno: 1,
+            ornamentType: 'Necklace', 
+            weight: '', 
+            advance: '', 
+            customerNotes: '',
+            photo: null,
+            status: ORDER_STATUS.PENDING,
+            itemStatus: ITEM_STATUS.WITH_WORKER,
+            notes: '',
+            isSubmitted: false
+          },
         ],
-        images: [],
-        showImageModal: false,
+        orderStatus: ORDER_STATUS.PENDING,
+        isPlaced: false,
+        reminderActive: false,
+        reminderCount: 0,
       },
     ]);
     setActiveTab(filteredOrders.length);
   };
- 
+
   const removeTab = (filteredIdx) => {
     if (orders.length === 1) return;
-    setConfirmModal({ open: true, type: 'order', idx: filteredIdx });
-  };
- 
-  const handleConfirmDelete = () => {
-    if (confirmModal.type === 'item') {
-      updateOrder(activeTab, { items: items.filter((_, i) => i !== confirmModal.idx) });
-    } else if (confirmModal.type === 'order') {
-      // Remove by orderId
-      const orderId = filteredOrders[confirmModal.idx]?.orderId;
-      const newOrders = orders.filter((o) => o.orderId !== orderId);
-      setOrders(newOrders);
-      setActiveTab(0);
+    const orderId = filteredOrders[filteredIdx]?.orderId;
+    
+    // Clear any active reminder for this order
+    if (reminderIntervals[orderId]) {
+      clearInterval(reminderIntervals[orderId]);
+      setReminderIntervals(prev => {
+        const newIntervals = { ...prev };
+        delete newIntervals[orderId];
+        return newIntervals;
+      });
     }
-    setConfirmModal({ open: false, type: '', idx: null });
+    
+    const newOrders = orders.filter((o) => o.orderId !== orderId);
+    setOrders(newOrders);
+    setActiveTab(0);
   };
- 
-  const handleCancelDelete = () => {
-    setConfirmModal({ open: false, type: '', idx: null });
+
+  // Function to start reminder notifications with Firebase monitoring
+  const startReminderNotifications = (order) => {
+    const phoneNumber = order.orderPeopleContact?.replace(/\D/g, '');
+    if (!phoneNumber || phoneNumber.length < 10) return;
+
+    // Clear any existing reminder for this order
+    if (reminderIntervals[order.orderId]) {
+      clearInterval(reminderIntervals[order.orderId]);
+    }
+
+    // Update order to show reminder is active
+    updateOrder(activeTab, { reminderActive: true, reminderCount: 0 });
+
+    // Note: Firebase monitoring removed
+
+    let reminderCount = 0;
+    const intervalId = setInterval(() => {
+      reminderCount++;
+      
+      const reminderMessage = `🔔 *REMINDER ${reminderCount}* - Order: ${order.orderId}\n\n` +
+        `Please confirm receipt of the order details.\n\n` +
+        `Reply "OK" or "RECEIVED" to stop these reminders.\n\n` +
+        `Customer: ${order.customer.name || 'N/A'}\n` +
+        `Contact: ${order.customer.contact || 'N/A'}`;
+
+      const whatsappUrl = `https://wa.me/91${phoneNumber}?text=${encodeURIComponent(reminderMessage)}`;
+      window.open(whatsappUrl, '_blank');
+
+      // Update reminder count
+      setOrders(prevOrders => 
+        prevOrders.map(o => 
+          o.orderId === order.orderId 
+            ? { ...o, reminderCount: reminderCount }
+            : o
+        )
+      );
+
+      // Stop after 10 reminders (50 seconds)
+      if (reminderCount >= 10) {
+        clearInterval(intervalId);
+        setReminderIntervals(prev => {
+          const newIntervals = { ...prev };
+          delete newIntervals[order.orderId];
+          return newIntervals;
+        });
+        
+        // Firebase monitoring removed
+        
+        setOrders(prevOrders => 
+          prevOrders.map(o => 
+            o.orderId === order.orderId 
+              ? { ...o, reminderActive: false }
+              : o
+          )
+        );
+        
+        alert(`Reminder notifications stopped for ${order.orderId} after 10 attempts.`);
+      }
+    }, 5000); // 5 seconds interval
+
+    // Store the interval ID
+    setReminderIntervals(prev => ({
+      ...prev,
+      [order.orderId]: intervalId
+    }));
+  };
+
+  // Function to stop reminder notifications
+  const stopReminderNotifications = (orderId) => {
+    if (reminderIntervals[orderId]) {
+      clearInterval(reminderIntervals[orderId]);
+      setReminderIntervals(prev => {
+        const newIntervals = { ...prev };
+        delete newIntervals[orderId];
+        return newIntervals;
+      });
+
+      // Firebase monitoring removed
+
+      setOrders(prevOrders => 
+        prevOrders.map(o => 
+          o.orderId === orderId 
+            ? { ...o, reminderActive: false }
+            : o
+        )
+      );
+
+      alert(`Reminder notifications stopped for ${orderId}.`);
+    }
+  };
+
+  // Cleanup intervals on component unmount
+  React.useEffect(() => {
+    return () => {
+      Object.values(reminderIntervals).forEach(intervalId => {
+        clearInterval(intervalId);
+      });
+    };
+  }, [reminderIntervals]);
+
+  const placeOrder = () => {
+    const order = currentOrder;
+    
+    // Validate required fields
+    if (!order.orderPeopleContact) {
+      alert('Please enter Order People Contact number before placing the order.');
+      return;
+    }
+
+    // Create WhatsApp message
+    const sendOrderToWhatsApp = () => {
+      let message = `🔔 *NEW ORDER RECEIVED*\n\n`;
+      message += `📋 *Order ID:* ${order.orderId}\n`;
+      message += `👤 *Customer:* ${order.customer.name || 'N/A'}\n`;
+      message += `📞 *Contact:* ${order.customer.contact || 'N/A'}\n`;
+      
+      if (order.requestedDeliveryDate) {
+        const deliveryDate = new Date(order.requestedDeliveryDate).toLocaleDateString();
+        message += `📅 *Expected Delivery:* ${deliveryDate}\n`;
+      }
+      
+      if (order.totalWeight) message += `⚖️ *Total Weight:* ${order.totalWeight} gms\n`;
+      if (order.orderWeightage) message += `📊 *Order Quantity:* ${order.orderWeightage}\n`;
+      
+      message += `\n📝 *ITEMS DETAILS:*\n`;
+      message += `━━━━━━━━━━━━━━━━━━━━\n`;
+      
+      order.items.forEach((item, idx) => {
+        message += `\n${idx + 1}. *${item.ornamentType}*\n`;
+        if (item.weight) message += `   Weight: ${item.weight} gms\n`;
+        if (item.customerNotes) message += `   Notes: ${item.customerNotes}\n`;
+        message += `   ────────────────────\n`;
+      });
+      
+      if (order.customer.address) {
+        message += `\n📍 *Address:*\n${order.customer.address}\n`;
+      }
+
+      // Clean phone number
+      const phoneNumber = order.orderPeopleContact.replace(/\D/g, '');
+      if (phoneNumber.length >= 10) {
+        const whatsappUrl = `https://wa.me/91${phoneNumber}?text=${encodeURIComponent(message)}`;
+        window.open(whatsappUrl, '_blank');
+        
+        // Show success message
+        alert('Order sent to WhatsApp!');
+      } else {
+        alert('Please enter a valid phone number for Order People Contact.');
+        return;
+      }
+    };
+
+    // Send to WhatsApp first
+    sendOrderToWhatsApp();
+    
+    // Then update order status
+    updateOrder(activeTab, { 
+      isPlaced: true,
+      orderStatus: ORDER_STATUS.IN_PROGRESS 
+    });
+
+    // Start reminder notifications
+    setTimeout(() => {
+      startReminderNotifications(order);
+    }, 2000); // Start reminders 2 seconds after initial message
+  };
+
+  const updateOrderStatus = (newStatus) => {
+    updateOrder(activeTab, { orderStatus: newStatus });
+  };
+
+  const sendPhotosToWhatsApp = () => {
+    const order = currentOrder;
+    const itemsWithPhotos = order.items.filter(item => item.photo);
+    
+    if (itemsWithPhotos.length === 0) {
+      alert('No photos available to send.');
+      return;
+    }
+
+    const phoneNumber = order.orderPeopleContact?.replace(/\D/g, '');
+    if (!phoneNumber || phoneNumber.length < 10) {
+      alert('Order People Contact not available.');
+      return;
+    }
+
+    let message = `📸 *PHOTOS FOR ORDER: ${order.orderId}*\n\n`;
+    message += `Please find the reference photos for the following items:\n\n`;
+    
+    itemsWithPhotos.forEach((item, idx) => {
+      message += `${idx + 1}. ${item.ornamentType}`;
+      if (item.customerNotes) {
+        message += ` - ${item.customerNotes}`;
+      }
+      message += `\n`;
+    });
+    
+    message += `\n📝 Note: Photos will be sent as separate messages after this text.`;
+
+    const whatsappUrl = `https://wa.me/91${phoneNumber}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+    
+    alert(`Photos message sent! Please manually send ${itemsWithPhotos.length} photo(s) in the WhatsApp chat.`);
   };
  
 
  
-  const [showTable, setShowTable] = useState(false);
-  const [tableFilters, setTableFilters] = useState({ orderId: '', name: '', receiver: '' });
- 
   return (
-    <div className="min-h-screen w-full h-full bg-gradient-to-br from-blue-50 via-white to-blue-100 overflow-x-hidden">
+    <>
       <Employeeheader />
-      <div className="w-full h-full px-0 py-0">
-        <div className="flex flex-col md:flex-row md:items-center gap-4 pl-4 pt-4 mb-4">
-          <h1 className="text-3xl font-bold text-blue-900">Order Management</h1>
-          <button
-            className="px-4 py-2 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-bold text-base shadow transition"
-            onClick={() => setShowTable((prev) => !prev)}
-          >
-            {showTable ? 'Back to Orders' : 'Orders'}
-          </button>
-          <input
-            type="text"
-            value={search}
-            onChange={e => { setSearch(e.target.value); setActiveTab(0); }}
-            placeholder="Search by Order ID, Name, or Number"
-            className="px-4 py-2 rounded-xl border border-blue-200 bg-blue-50 text-blue-900 placeholder:text-blue-400 text-base focus:ring-2 focus:ring-blue-400 transition w-full md:w-96"
-            style={{ maxWidth: 400 }}
-          />
-        </div>
-        {showTable && (
-          <div className="px-4 pb-8">
-            <div className="flex flex-wrap gap-4 mb-4">
-              <input
-                type="text"
-                placeholder="Filter by Order ID"
-                value={tableFilters.orderId}
-                onChange={e => setTableFilters(f => ({ ...f, orderId: e.target.value }))}
-                className="px-3 py-2 rounded-lg border border-blue-200 bg-blue-50 text-blue-900 placeholder:text-blue-400 text-base focus:ring-2 focus:ring-blue-400 transition"
-                style={{ minWidth: 160 }}
-              />
-              <input
-                type="text"
-                placeholder="Filter by Name"
-                value={tableFilters.name}
-                onChange={e => setTableFilters(f => ({ ...f, name: e.target.value }))}
-                className="px-3 py-2 rounded-lg border border-blue-200 bg-blue-50 text-blue-900 placeholder:text-blue-400 text-base focus:ring-2 focus:ring-blue-400 transition"
-                style={{ minWidth: 160 }}
-              />
-              <input
-                type="text"
-                placeholder="Filter by Receiver Number"
-                value={tableFilters.receiver}
-                onChange={e => setTableFilters(f => ({ ...f, receiver: e.target.value }))}
-                className="px-3 py-2 rounded-lg border border-blue-200 bg-blue-50 text-blue-900 placeholder:text-blue-400 text-base focus:ring-2 focus:ring-blue-400 transition"
-                style={{ minWidth: 160 }}
-              />
+      <div className="min-h-screen bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50">
+        {/* Main Content */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          {/* Header Section */}
+          <div className="mb-8">
+            <div className="bg-gradient-to-r from-yellow-100 to-amber-100 border border-yellow-300 rounded-2xl p-6 text-center shadow-lg mb-6">
+              <h1 className="text-3xl font-bold text-yellow-800 mb-2">📋 Order Management System</h1>
+              <p className="text-yellow-700 text-sm">
+                Manage customer orders, track progress, and coordinate with production teams
+              </p>
             </div>
-            <div className="overflow-x-auto rounded-2xl shadow border border-blue-100 bg-white">
-              <table className="min-w-full divide-y divide-blue-100">
-                <thead className="bg-blue-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Order ID</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Customer Name</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Contact</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Receiver Number</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-blue-700 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-blue-50">
-                  {orders
-                    .filter(order =>
-                      (!tableFilters.orderId || order.orderId.toLowerCase().includes(tableFilters.orderId.toLowerCase())) &&
-                      (!tableFilters.name || (order.customer.name || '').toLowerCase().includes(tableFilters.name.toLowerCase())) &&
-                      (!tableFilters.receiver || (order.receiver || '').toLowerCase().includes(tableFilters.receiver.toLowerCase()))
-                    )
-                    .map((order) => (
-                      <tr key={order.orderId} className="hover:bg-blue-50 transition">
-                        <td className="px-4 py-2 font-mono text-blue-900">{order.orderId}</td>
-                        <td className="px-4 py-2">{order.customer.name}</td>
-                        <td className="px-4 py-2">{order.customer.contact}</td>
-                        <td className="px-4 py-2">{order.receiver}</td>
-                        <td className="px-4 py-2">
-                          <button
-                            className="px-3 py-1 rounded bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold shadow"
-                            onClick={() => {
-                              setShowTable(false);
-                              // Find the index in filteredOrders for this order
-                              const filteredIdx = filteredOrders.findIndex(o => o.orderId === order.orderId);
-                              if (filteredIdx !== -1) setActiveTab(filteredIdx);
-                              else {
-                                // If not in filteredOrders, reset search and set tab by index in orders
-                                setSearch('');
-                                setActiveTab(orders.findIndex(o => o.orderId === order.orderId));
-                              }
-                            }}
-                          >View/Edit</button>
-                        </td>
-                      </tr>
-                    ))}
-                  {orders.filter(order =>
-                    (!tableFilters.orderId || order.orderId.toLowerCase().includes(tableFilters.orderId.toLowerCase())) &&
-                    (!tableFilters.name || (order.customer.name || '').toLowerCase().includes(tableFilters.name.toLowerCase())) &&
-                    (!tableFilters.receiver || (order.receiver || '').toLowerCase().includes(tableFilters.receiver.toLowerCase()))
-                  ).length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="px-4 py-6 text-center text-blue-400">No orders found</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+            
+            <div className="flex flex-col md:flex-row md:items-center gap-4">
+              <button
+                className="px-6 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white font-bold text-base shadow-lg transition-all duration-200 transform hover:scale-105"
+                onClick={() => setShowTable((prev) => !prev)}
+              >
+                {showTable ? '📝 Back to Orders' : '📊 View All Orders'}
+              </button>
+              <input
+                type="text"
+                value={search}
+                onChange={e => { setSearch(e.target.value); setActiveTab(0); }}
+                placeholder="🔍 Search by Order ID, Name, or Contact"
+                className="px-6 py-3 rounded-2xl border-2 border-yellow-200 bg-white text-gray-800 placeholder:text-gray-500 text-base focus:ring-4 focus:ring-yellow-200 focus:border-yellow-400 transition-all duration-200 w-full md:w-96 shadow-lg"
+              />
             </div>
           </div>
-        )}
-        {!showTable && (
-          <>
-            {search && filteredOrders.length === 0 && (
-              <div className="mb-8 pl-4 text-red-500 font-semibold text-lg">No order found</div>
-            )}
-            {filteredOrders.length > 0 && (
-              <div className="mb-4 pl-4 text-blue-700 font-semibold">
-                Order ID: {filteredOrders[activeTab].orderId}
+          {/* Orders Table View */}
+          {showTable && (
+            <div className="mb-8">
+              <div className="bg-white rounded-3xl shadow-2xl border border-yellow-100 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-yellow-100">
+                    <thead className="bg-gradient-to-r from-yellow-50 to-amber-50">
+                      <tr>
+                        <th className="px-6 py-4 text-left text-sm font-bold text-yellow-800 uppercase tracking-wider">📋 Order ID</th>
+                        <th className="px-6 py-4 text-left text-sm font-bold text-yellow-800 uppercase tracking-wider">👤 Customer Name</th>
+                        <th className="px-6 py-4 text-left text-sm font-bold text-yellow-800 uppercase tracking-wider">📞 Contact</th>
+                        <th className="px-6 py-4 text-left text-sm font-bold text-yellow-800 uppercase tracking-wider">📊 Status</th>
+                        <th className="px-6 py-4 text-left text-sm font-bold text-yellow-800 uppercase tracking-wider">⚡ Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-yellow-50">
+                      {orders.map((order, idx) => (
+                        <tr key={order.orderId} className="hover:bg-gradient-to-r hover:from-yellow-50 hover:to-amber-50 transition-all duration-200">
+                          <td className="px-6 py-4 font-mono text-gray-900 font-semibold">{order.orderId}</td>
+                          <td className="px-6 py-4 text-gray-800">{order.customer.name || 'N/A'}</td>
+                          <td className="px-6 py-4 text-gray-800">{order.customer.contact || 'N/A'}</td>
+                          <td className="px-6 py-4">
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold shadow-sm ${
+                              order.orderStatus === ORDER_STATUS.PENDING ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' :
+                              order.orderStatus === ORDER_STATUS.IN_PROGRESS ? 'bg-blue-100 text-blue-800 border border-blue-200' :
+                              order.orderStatus === ORDER_STATUS.DELAYED ? 'bg-red-100 text-red-800 border border-red-200' :
+                              'bg-green-100 text-green-800 border border-green-200'
+                            }`}>
+                              {order.orderStatus}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <button
+                              className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white text-sm font-bold shadow-lg transition-all duration-200 transform hover:scale-105"
+                              onClick={() => {
+                                setShowTable(false);
+                                const filteredIdx = filteredOrders.findIndex(o => o.orderId === order.orderId);
+                                if (filteredIdx !== -1) setActiveTab(filteredIdx);
+                                else {
+                                  setSearch('');
+                                  setActiveTab(orders.findIndex(o => o.orderId === order.orderId));
+                                }
+                              }}
+                            >
+                              <FaEye className="inline mr-2" />
+                              View/Edit
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            )}
-            {/* Tabs */}
-            {filteredOrders.length > 0 && (
-              <div className="flex gap-2 mb-6 border-b border-blue-100 pl-4 w-full overflow-x-auto">
+            </div>
+          )}
+          {/* Order Form View */}
+          {!showTable && filteredOrders.length > 0 && (
+            <>
+              {/* Order Tabs */}
+              <div className="flex gap-3 mb-8 border-b-2 border-yellow-200 w-full overflow-x-auto pb-2">
                 {filteredOrders.map((order, idx) => (
                   <div key={order.orderId} className="relative">
                     <button
-                      className={`px-5 py-2 rounded-t-xl font-semibold transition text-base focus:outline-none ${activeTab === idx ? 'bg-white shadow text-blue-900 border border-b-0 border-blue-200' : 'bg-blue-50 text-blue-400 hover:text-blue-700'}`}
+                      className={`px-6 py-3 rounded-t-2xl font-bold text-sm transition-all duration-200 whitespace-nowrap shadow-lg ${
+                        activeTab === idx
+                          ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white border-b-4 border-amber-600 transform scale-105'
+                          : 'bg-gradient-to-r from-yellow-100 to-amber-100 text-yellow-800 hover:from-yellow-200 hover:to-amber-200 border border-yellow-300'
+                      }`}
                       onClick={() => setActiveTab(idx)}
                     >
-                      {order.orderId}
+                      📋 {order.orderId}
+                      {order.isPlaced && <span className="ml-2 text-xs">✅</span>}
                     </button>
-                    {filteredOrders.length > 1 && (
+                    {orders.length > 1 && (
                       <button
-                        className="absolute -right-2 -top-2 bg-white text-red-400 hover:text-red-600 rounded-full p-1 shadow"
+                        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs hover:bg-red-600 transition-all duration-200 shadow-lg transform hover:scale-110"
                         onClick={() => removeTab(idx)}
-                        title="Remove order"
-                        style={{ zIndex: 2 }}
                       >
-                        <FaTimes />
+                        ×
                       </button>
                     )}
                   </div>
                 ))}
                 <button
-                  className="px-4 py-2 rounded-t-xl bg-blue-50 text-blue-500 hover:bg-blue-100 font-bold text-xl ml-2"
+                  className="px-6 py-3 rounded-t-2xl bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600 transition-all duration-200 text-sm font-bold shadow-lg transform hover:scale-105"
                   onClick={addTab}
-                  title="Add new order"
                 >
-                  <FaPlus />
+                  <FaPlus className="inline mr-2" />
+                  ➕ New Order
                 </button>
               </div>
-            )}
-            {/* Order Form (per tab) */}
-            <div className="bg-white/90 rounded-none shadow-none p-2 md:p-4 border-0 w-full h-full">
-              <div className="flex flex-col md:flex-row gap-4 mb-8">
-                <input
-                  type="text"
-                  name="name"
-                  value={customer.name}
-                  onChange={handleCustomerChange}
-                  className="flex-1 px-4 py-3 rounded-xl bg-blue-50 border-none focus:ring-2 focus:ring-blue-400 text-blue-900 placeholder:text-blue-300 text-base transition"
-                  placeholder="Customer Name (optional)"
-                />
-                <input
-                  type="text"
-                  name="contact"
-                  value={customer.contact}
-                  onChange={handleCustomerChange}
-                  className="flex-1 px-4 py-3 rounded-xl bg-blue-50 border-none focus:ring-2 focus:ring-blue-400 text-blue-900 placeholder:text-blue-300 text-base transition"
-                  placeholder="Contact (optional)"
-                />
-                <input
-                  type="text"
-                  name="receiver"
-                  value={receiver}
-                  onChange={handleReceiverChange}
-                  className="flex-1 px-4 py-3 rounded-xl bg-blue-50 border-none focus:ring-2 focus:ring-blue-400 text-blue-900 placeholder:text-blue-300 text-base transition"
-                  placeholder="WhatsApp Number or Group ID (e.g., ESie4aulBDyId1KpkpiH10)"
-                  required
-                />
-              </div>
-              {items.map((item, idx) => (
-                <div key={idx} className="mb-8 p-5 rounded-2xl border border-blue-100 bg-blue-50/60 shadow-sm relative animate-fadeIn">
-                  <div className="flex flex-wrap md:flex-nowrap gap-4 items-stretch">
-                    <div className="flex flex-col gap-1 flex-1 min-w-[120px] w-full md:w-auto">
-                      <label className="font-semibold text-blue-700 mb-1">Metal</label>
-                      <select
-                        value={item.metal}
-                        onChange={e => handleItemChange(idx, 'metal', e.target.value)}
-                        className="px-3 py-2 rounded-lg bg-white border border-blue-200 focus:ring-2 focus:ring-blue-400 text-blue-900 transition"
-                      >
-                        <option value="Gold">Gold</option>
-                        <option value="Silver">Silver</option>
-                      </select>
+              {/* Order Form */}
+              <div className="bg-white rounded-3xl shadow-2xl border border-yellow-100 p-8">
+                {/* Order Header */}
+                <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-6 mb-8">
+                  <div className="flex items-center gap-4">
+                    <div className="bg-gradient-to-r from-yellow-500 to-amber-500 rounded-2xl p-3">
+                      <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
                     </div>
-                    <div className="flex flex-col gap-1 flex-1 min-w-[140px] w-full md:w-auto">
-                      <label className="font-semibold text-blue-700 mb-1">Ornament</label>
-                      <select
-                        value={item.ornament}
-                        onChange={e => handleItemChange(idx, 'ornament', e.target.value)}
-                        className="px-3 py-2 rounded-lg bg-white border border-blue-200 focus:ring-2 focus:ring-blue-400 text-blue-900 transition"
-                      >
-                        {ORNAMENT_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
-                      </select>
-                      {item.ornament === 'Other' && (
-                        <input
-                          type="text"
-                          value={item.otherDetails || ''}
-                          onChange={e => handleItemChange(idx, 'otherDetails', e.target.value)}
-                          className="mt-2 px-3 py-2 rounded-lg bg-white border border-blue-200 focus:ring-2 focus:ring-blue-400 text-blue-900 placeholder:text-blue-300 transition"
-                          placeholder="Enter ornament details"
-                        />
-                      )}
+                    <div>
+                      <h2 className="text-3xl font-bold text-gray-900">
+                        📋 {currentOrder.orderId}
+                        {currentOrder.isPlaced && (
+                          <span className="ml-4 px-4 py-2 bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 text-lg rounded-2xl border border-green-200 shadow-lg">
+                            ✅ Order Placed
+                          </span>
+                        )}
+                      </h2>
+                      <p className="text-gray-600 mt-1">Manage order details and track progress</p>
                     </div>
-                    <div className="flex flex-col gap-1 w-full md:w-28">
-                      <label className="font-semibold text-blue-700 mb-1">Weight (gms)</label>
+                  </div>
+                  <div className="flex flex-col md:flex-row md:items-start gap-4">
+                    <div className="flex flex-col">
+                      <label className="text-sm font-bold text-yellow-800 mb-2">📞 Order People Contact</label>
                       <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={item.weight || ''}
-                        onChange={e => handleItemChange(idx, 'weight', e.target.value)}
-                        className="px-3 py-2 rounded-lg bg-white border border-blue-200 focus:ring-2 focus:ring-blue-400 text-blue-900 placeholder:text-blue-300 transition"
-                        placeholder="e.g. 10.5"
+                        type="tel"
+                        value={currentOrder.orderPeopleContact || ''}
+                        onChange={(e) => handleOrderFieldChange('orderPeopleContact', e.target.value)}
+                        className="px-4 py-3 border-2 border-yellow-200 rounded-2xl focus:ring-4 focus:ring-yellow-200 focus:border-yellow-400 w-64 shadow-lg transition-all duration-200"
+                        placeholder="WhatsApp Number"
+                        disabled={currentOrder.isPlaced}
                       />
                     </div>
-                    <div className="flex flex-col gap-1 w-full md:w-20">
-                      <label className="font-semibold text-blue-700 mb-1">Qty</label>
+                    {currentOrder.isPlaced && (
+                      <div className="flex flex-col">
+                        <label className="text-sm font-bold text-yellow-800 mb-2">📊 Order Status</label>
+                        <select
+                          value={currentOrder.orderStatus}
+                          onChange={(e) => updateOrderStatus(e.target.value)}
+                          className="px-4 py-3 border-2 border-yellow-200 rounded-2xl focus:ring-4 focus:ring-yellow-200 focus:border-yellow-400 shadow-lg transition-all duration-200"
+                        >
+                          <option value={ORDER_STATUS.IN_PROGRESS}>Work in Progress</option>
+                          <option value={ORDER_STATUS.DELAYED}>Work in Delay</option>
+                          <option value={ORDER_STATUS.COMPLETED}>Work Completed</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Customer Information */}
+                <div className="bg-gradient-to-r from-yellow-50 to-amber-50 rounded-2xl p-6 mb-8 border border-yellow-200">
+                  <h3 className="text-xl font-bold text-yellow-800 mb-6 flex items-center gap-2">
+                    👤 Customer Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                      <label className="block text-sm font-bold text-yellow-800 mb-2">📝 Customer Name</label>
                       <input
-                        type="number"
-                        min="1"
-                        value={item.quantity}
-                        onChange={e => handleItemChange(idx, 'quantity', e.target.value)}
-                        className="px-3 py-2 rounded-lg bg-white border border-blue-200 focus:ring-2 focus:ring-blue-400 text-blue-900 transition"
+                        type="text"
+                        value={currentOrder.customer?.name || ''}
+                        onChange={(e) => handleCustomerChange('name', e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-yellow-200 rounded-2xl focus:ring-4 focus:ring-yellow-200 focus:border-yellow-400 shadow-lg transition-all duration-200"
+                        placeholder="Enter customer name"
+                        disabled={currentOrder.isPlaced}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-yellow-800 mb-2">📞 Contact Number</label>
+                      <input
+                        type="text"
+                        value={currentOrder.customer?.contact || ''}
+                        onChange={(e) => handleCustomerChange('contact', e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-yellow-200 rounded-2xl focus:ring-4 focus:ring-yellow-200 focus:border-yellow-400 shadow-lg transition-all duration-200"
+                        placeholder="Phone number"
+                        disabled={currentOrder.isPlaced}
                       />
                     </div>
                   </div>
-                  {items.length > 1 && (
+                  <div className="mb-6">
+                    <label className="block text-sm font-bold text-yellow-800 mb-2">🏠 Customer Address</label>
+                    <textarea
+                      value={currentOrder.customer?.address || ''}
+                      onChange={(e) => handleCustomerChange('address', e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-yellow-200 rounded-2xl focus:ring-4 focus:ring-yellow-200 focus:border-yellow-400 shadow-lg transition-all duration-200"
+                      placeholder="Enter complete address"
+                      rows="3"
+                      disabled={currentOrder.isPlaced}
+                    />
+                  </div>
+                </div>
+
+                {/* Order Details */}
+                <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl p-6 mb-8 border border-amber-200">
+                  <h3 className="text-xl font-bold text-amber-800 mb-6 flex items-center gap-2">
+                    📊 Order Details
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div>
+                      <label className="block text-sm font-bold text-amber-800 mb-2">⚖️ Total Weight</label>
+                      <input
+                        type="text"
+                        value={currentOrder.totalWeight || ''}
+                        onChange={(e) => handleOrderFieldChange('totalWeight', e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-amber-200 rounded-2xl focus:ring-4 focus:ring-amber-200 focus:border-amber-400 shadow-lg transition-all duration-200"
+                        placeholder="Weight in grams"
+                        disabled={currentOrder.isPlaced}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-amber-800 mb-2">💰 Advance Amount</label>
+                      <input
+                        type="text"
+                        value={currentOrder.advance || ''}
+                        onChange={(e) => handleOrderFieldChange('advance', e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-amber-200 rounded-2xl focus:ring-4 focus:ring-amber-200 focus:border-amber-400 shadow-lg transition-all duration-200"
+                        placeholder="Advance payment"
+                        disabled={currentOrder.isPlaced}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-amber-800 mb-2">📅 Delivery Date</label>
+                      <input
+                        type="date"
+                        value={currentOrder.requestedDeliveryDate || ''}
+                        onChange={(e) => handleOrderFieldChange('requestedDeliveryDate', e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-amber-200 rounded-2xl focus:ring-4 focus:ring-amber-200 focus:border-amber-400 shadow-lg transition-all duration-200"
+                        disabled={currentOrder.isPlaced}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-amber-800 mb-2">📦 Order Quantity</label>
+                      <input
+                        type="text"
+                        value={currentOrder.orderWeightage || ''}
+                        onChange={(e) => handleOrderFieldChange('orderWeightage', e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-amber-200 rounded-2xl focus:ring-4 focus:ring-amber-200 focus:border-amber-400 shadow-lg transition-all duration-200"
+                        placeholder="Quantity/Weightage"
+                        disabled={currentOrder.isPlaced}
+                      />
+                    </div>
+                  </div>
+                </div>
+                {/* Items Table */}
+                <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-2xl p-6 mb-8 border border-orange-200">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-bold text-orange-800 flex items-center gap-2">
+                      💎 Order Items
+                    </h3>
+                    {!currentOrder.isPlaced && (
+                      <button
+                        onClick={addItem}
+                        className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-2xl hover:from-green-600 hover:to-emerald-600 transition-all duration-200 font-bold shadow-lg transform hover:scale-105"
+                      >
+                        <FaPlus className="inline mr-2" />
+                        ➕ Add Item
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="overflow-x-auto rounded-2xl shadow-lg">
+                    <table className="w-full border border-orange-200 rounded-2xl overflow-hidden">
+                      <thead className="bg-gradient-to-r from-orange-100 to-red-100">
+                        <tr>
+                          <th className="px-6 py-4 text-left text-sm font-bold text-orange-800">📝 S.No</th>
+                          <th className="px-6 py-4 text-left text-sm font-bold text-orange-800">💎 Ornament Type</th>
+                          <th className="px-6 py-4 text-left text-sm font-bold text-orange-800">⚖️ Weight (gms)</th>
+                          <th className="px-6 py-4 text-left text-sm font-bold text-orange-800">💰 Advance</th>
+                          <th className="px-6 py-4 text-left text-sm font-bold text-orange-800">📝 Customer Notes</th>
+                          <th className="px-6 py-4 text-left text-sm font-bold text-orange-800">📸 Photo</th>
+                          {currentOrder.isPlaced && (
+                            <>
+                              <th className="px-6 py-4 text-left text-sm font-bold text-orange-800">📊 Status</th>
+                              <th className="px-6 py-4 text-left text-sm font-bold text-orange-800">🏭 Item Status</th>
+                              <th className="px-6 py-4 text-left text-sm font-bold text-orange-800">📝 Notes</th>
+                              <th className="px-6 py-4 text-left text-sm font-bold text-orange-800">✅ Submit</th>
+                            </>
+                          )}
+                          {!currentOrder.isPlaced && (
+                            <th className="px-6 py-4 text-left text-sm font-bold text-orange-800">⚡ Actions</th>
+                          )}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-orange-100 bg-white">
+                        {currentOrder.items?.map((item, idx) => (
+                          <tr key={idx} className="hover:bg-gradient-to-r hover:from-orange-50 hover:to-red-50 transition-all duration-200">
+                            <td className="px-6 py-4 text-sm font-semibold text-gray-800">{item.sno}</td>
+                            <td className="px-6 py-4">
+                              <select
+                                value={item.ornamentType}
+                                onChange={(e) => handleItemChange(idx, 'ornamentType', e.target.value)}
+                                className="w-full px-3 py-2 border-2 border-orange-200 rounded-xl focus:ring-4 focus:ring-orange-200 focus:border-orange-400 text-sm shadow-lg transition-all duration-200"
+                                disabled={currentOrder.isPlaced}
+                              >
+                                {ORNAMENT_TYPES.map(type => (
+                                  <option key={type} value={type}>{type}</option>
+                                ))}
+                              </select>
+                            </td>
+                            <td className="px-6 py-4">
+                              <input
+                                type="text"
+                                value={item.weight}
+                                onChange={(e) => handleItemChange(idx, 'weight', e.target.value)}
+                                className="w-full px-3 py-2 border-2 border-orange-200 rounded-xl focus:ring-4 focus:ring-orange-200 focus:border-orange-400 text-sm shadow-lg transition-all duration-200"
+                                placeholder="Weight"
+                                disabled={currentOrder.isPlaced}
+                              />
+                            </td>
+                            <td className="px-6 py-4">
+                              <input
+                                type="text"
+                                value={item.advance}
+                                onChange={(e) => handleItemChange(idx, 'advance', e.target.value)}
+                                className="w-full px-3 py-2 border-2 border-orange-200 rounded-xl focus:ring-4 focus:ring-orange-200 focus:border-orange-400 text-sm shadow-lg transition-all duration-200"
+                                placeholder="Advance"
+                                disabled={currentOrder.isPlaced}
+                              />
+                            </td>
+                            <td className="px-6 py-4">
+                              <textarea
+                                value={item.customerNotes || ''}
+                                onChange={(e) => handleItemChange(idx, 'customerNotes', e.target.value)}
+                                className="w-full px-3 py-2 border-2 border-orange-200 rounded-xl focus:ring-4 focus:ring-orange-200 focus:border-orange-400 text-sm resize-none shadow-lg transition-all duration-200"
+                                placeholder="Customer Notes"
+                                rows="2"
+                                disabled={currentOrder.isPlaced}
+                              />
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex flex-col gap-2">
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={(e) => {
+                                    const file = e.target.files[0];
+                                    if (file) {
+                                      const reader = new FileReader();
+                                      reader.onload = (event) => {
+                                        handleItemChange(idx, 'photo', {
+                                          file: file,
+                                          url: event.target.result,
+                                          name: file.name
+                                        });
+                                      };
+                                      reader.readAsDataURL(file);
+                                    }
+                                  }}
+                                  className="w-full text-xs border border-orange-200 rounded-lg p-1"
+                                  disabled={currentOrder.isPlaced}
+                                />
+                                {item.photo && (
+                                  <div className="flex items-center gap-2">
+                                    <img 
+                                      src={item.photo.url} 
+                                      alt="Item photo" 
+                                      className="w-10 h-10 object-cover rounded-xl cursor-pointer shadow-lg border-2 border-orange-200 hover:border-orange-400 transition-all duration-200"
+                                      onClick={() => {
+                                        // Open image in modal or new tab
+                                        window.open(item.photo.url, '_blank');
+                                      }}
+                                    />
+                                    <span className="text-xs text-gray-600 truncate max-w-20 font-medium" title={item.photo.name}>
+                                      {item.photo.name}
+                                    </span>
+                                    {!currentOrder.isPlaced && (
+                                      <button
+                                        onClick={() => handleItemChange(idx, 'photo', null)}
+                                        className="text-red-500 hover:text-red-700 text-sm font-bold bg-red-100 hover:bg-red-200 rounded-full w-6 h-6 flex items-center justify-center transition-all duration-200"
+                                      >
+                                        ×
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                            {currentOrder.isPlaced && (
+                              <>
+                                <td className="px-6 py-4">
+                                  <select
+                                    value={item.status}
+                                    onChange={(e) => handleItemChange(idx, 'status', e.target.value)}
+                                    className="w-full px-3 py-2 border-2 border-orange-200 rounded-xl focus:ring-4 focus:ring-orange-200 focus:border-orange-400 text-sm shadow-lg transition-all duration-200"
+                                  >
+                                    <option value={ORDER_STATUS.PENDING}>Pending</option>
+                                    <option value={ORDER_STATUS.IN_PROGRESS}>In Progress</option>
+                                    <option value={ORDER_STATUS.DELAYED}>Delayed</option>
+                                    <option value={ORDER_STATUS.COMPLETED}>Completed</option>
+                                  </select>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <select
+                                    value={item.itemStatus}
+                                    onChange={(e) => handleItemChange(idx, 'itemStatus', e.target.value)}
+                                    className="w-full px-3 py-2 border-2 border-orange-200 rounded-xl focus:ring-4 focus:ring-orange-200 focus:border-orange-400 text-sm shadow-lg transition-all duration-200"
+                                  >
+                                    <option value={ITEM_STATUS.WITH_WORKER}>Items with Worker</option>
+                                    <option value={ITEM_STATUS.WITH_DEPARTMENT}>Items with Department</option>
+                                    <option value={ITEM_STATUS.DELIVERED}>Items delivered to customer</option>
+                                  </select>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <textarea
+                                    value={item.notes || ''}
+                                    onChange={(e) => handleItemChange(idx, 'notes', e.target.value)}
+                                    className="w-full px-3 py-2 border-2 border-orange-200 rounded-xl focus:ring-4 focus:ring-orange-200 focus:border-orange-400 text-sm resize-none shadow-lg transition-all duration-200"
+                                    placeholder="Internal Notes"
+                                    rows="2"
+                                  />
+                                </td>
+                                <td className="px-6 py-4">
+                                  <button
+                                    onClick={() => {
+                                      // Mark item as submitted
+                                      handleItemChange(idx, 'isSubmitted', !item.isSubmitted);
+                                    }}
+                                    className={`px-4 py-2 rounded-xl text-sm font-bold transition-all duration-200 shadow-lg transform hover:scale-105 ${
+                                      item.isSubmitted 
+                                        ? 'bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 hover:from-green-200 hover:to-emerald-200 border border-green-300' 
+                                        : 'bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-800 hover:from-blue-200 hover:to-cyan-200 border border-blue-300'
+                                    }`}
+                                  >
+                                    {item.isSubmitted ? '✅ Submitted' : '📤 Submit'}
+                                  </button>
+                                </td>
+                              </>
+                            )}
+                            {!currentOrder.isPlaced && (
+                              <td className="px-6 py-4">
+                                <button
+                                  onClick={() => removeItem(idx)}
+                                  className="px-3 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:from-red-600 hover:to-red-700 transition-all duration-200 text-sm font-bold shadow-lg transform hover:scale-105"
+                                  disabled={currentOrder.items.length === 1}
+                                >
+                                  <FaTrash />
+                                </button>
+                              </td>
+                            )}
+                        </tr>
+                      ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-6 justify-end">
+                  {!currentOrder.isPlaced ? (
+                    <div className="flex flex-col items-end gap-4">
+                      {!currentOrder.orderPeopleContact && (
+                        <div className="bg-red-50 border border-red-200 rounded-2xl p-4">
+                          <p className="text-sm text-red-700 font-semibold flex items-center gap-2">
+                            ⚠️ Order People Contact is required to place order
+                          </p>
+                        </div>
+                      )}
+                      <button
+                        onClick={placeOrder}
+                        disabled={!currentOrder.orderPeopleContact}
+                        className={`px-8 py-4 rounded-2xl transition-all duration-200 font-bold flex items-center gap-3 text-lg shadow-2xl transform hover:scale-105 ${
+                          currentOrder.orderPeopleContact
+                            ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600'
+                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        }`}
+                      >
+                        <FaWhatsapp className="text-xl" />
+                        📤 Place Order & Send to WhatsApp
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-4 flex-wrap items-center">
+                      {currentOrder.reminderActive && (
+                        <div className="flex items-center gap-4 bg-orange-50 border border-orange-200 rounded-2xl p-4">
+                          <span className="text-sm text-orange-700 font-bold flex items-center gap-2">
+                            🔔 Sending reminders ({currentOrder.reminderCount || 0}/10)
+                          </span>
+                          <button
+                            onClick={() => stopReminderNotifications(currentOrder.orderId)}
+                            className="px-4 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl text-sm hover:from-orange-600 hover:to-red-600 transition-all duration-200 font-bold shadow-lg transform hover:scale-105"
+                          >
+                            🛑 Stop Reminders
+                          </button>
+                        </div>
+                      )}
                     <button
-                      type="button"
-                      onClick={() => removeItem(idx)}
-                      className="absolute top-2 right-2 text-red-400 hover:text-red-600 bg-white rounded-full p-2 shadow z-10 flex items-center justify-center"
-                      title="Remove item"
-                      style={{ right: 8, top: 8 }}
-                    >
-                      <FaTrash />
-                    </button>
+                      onClick={() => {
+                        const confirmDelete = window.confirm(
+                          `Are you sure you want to mark Order ${currentOrder.orderId} as completed?\n\nThis will permanently delete the order from the database and stop any active reminders.`
+                        );
+                        
+                        if (confirmDelete) {
+                          // Clear any active reminder for this order
+                          if (reminderIntervals[currentOrder.orderId]) {
+                            clearInterval(reminderIntervals[currentOrder.orderId]);
+                            setReminderIntervals(prev => {
+                              const newIntervals = { ...prev };
+                              delete newIntervals[currentOrder.orderId];
+                              return newIntervals;
+                            });
+                          }
+                          
+                          // Remove the order from the database
+                          const orderId = currentOrder.orderId;
+                          const newOrders = orders.filter(order => order.orderId !== orderId);
+                          setOrders(newOrders);
+                          
+                          // Reset active tab if needed
+                          if (newOrders.length === 0) {
+                            // If no orders left, create a new empty order
+                            setOrders([{
+                              orderId: 'ORD-00001',
+                              customer: { name: '', contact: '', address: '' },
+                              subQuantity: '',
+                              totalWeight: '',
+                              advance: '',
+                              requestedDeliveryDate: '',
+                              orderWeightage: '',
+                              orderPeopleContact: '',
+                              items: [
+                                { 
+                                  sno: 1,
+                                  ornamentType: 'Necklace', 
+                                  weight: '', 
+                                  advance: '', 
+                                  customerNotes: '',
+                                  photo: null,
+                                  status: ORDER_STATUS.PENDING,
+                                  itemStatus: ITEM_STATUS.WITH_WORKER,
+                                  notes: '',
+                                  isSubmitted: false
+                                },
+                              ],
+                              orderStatus: ORDER_STATUS.PENDING,
+                              isPlaced: false,
+                              reminderActive: false,
+                              reminderCount: 0,
+                            }]);
+                            setActiveTab(0);
+                          } else {
+                            // Adjust active tab to stay within bounds
+                            if (activeTab >= newOrders.length) {
+                              setActiveTab(newOrders.length - 1);
+                            }
+                          }
+                          
+                          alert(`Order ${orderId} has been completed and removed from the database.`);
+                        }
+                      }}
+                        className="px-8 py-4 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-2xl hover:from-red-600 hover:to-red-700 transition-all duration-200 font-bold flex items-center gap-3 text-lg shadow-2xl transform hover:scale-105"
+                      >
+                        ✅ Order Completed
+                      </button>
+                    </div>
                   )}
                 </div>
-              ))}
-              <button
-                type="button"
-                onClick={addItem}
-                className="flex items-center gap-2 px-5 py-3 rounded-xl bg-blue-100 hover:bg-blue-200 text-blue-700 font-semibold mb-8 transition text-base shadow"
-              >
-                <FaPlus /> Add Item
-              </button>
-
-              {/* Image Upload Section */}
-              <div className="mb-8 p-5 rounded-2xl border border-blue-100 bg-blue-50/60 shadow-sm">
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="text-lg">📸</span>
-                  <h3 className="font-semibold text-blue-700 text-lg">Reference Images</h3>
-                </div>
-                
-                {/* Image Upload Input */}
-                <div className="mb-4">
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                    id="image-upload"
-                  />
-                  <label
-                    htmlFor="image-upload"
-                    className="flex items-center gap-2 px-4 py-3 rounded-xl bg-blue-100 hover:bg-blue-200 text-blue-700 font-semibold cursor-pointer transition text-base shadow"
-                  >
-                    <FaPlus /> Upload Reference Images
-                  </label>
-                </div>
-
-                {/* Display Uploaded Images */}
-                {filteredOrders[activeTab]?.images && filteredOrders[activeTab].images.length > 0 && (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {filteredOrders[activeTab].images.map((image, index) => (
-                      <div key={index} className="relative group">
-                        <img
-                          src={image.imageUrl}
-                          alt={`Reference ${index + 1}`}
-                          className="w-full h-32 object-cover rounded-lg border border-blue-200"
-                        />
-                        <button
-                          onClick={() => removeImage(index)}
-                          className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                          title="Remove image"
-                        >
-                          <FaTimes className="w-3 h-3" />
-                        </button>
-                        <div className="text-xs text-blue-600 mt-1 truncate">{image.name}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {(!filteredOrders[activeTab]?.images || filteredOrders[activeTab].images.length === 0) && (
-                  <div className="text-center py-8 text-blue-400">
-                    <div className="text-4xl mb-2">📸</div>
-                    <p className="text-sm">No reference images uploaded yet</p>
-                    <p className="text-xs mt-1">Upload images to help with order details</p>
-                  </div>
-                )}
               </div>
-              {filteredOrders.length > 0 && (!orderSent ? (
-                <button
-                  type="button"
-                  onClick={handleSend}
-                  className={`w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl font-bold text-xl shadow-lg transition mt-2 ${receiver.trim().length < 5 ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 text-white'}`}
-                  disabled={receiver.trim().length < 5}
-                >
-                  <FaWhatsapp className="w-7 h-7" /> Send Order to WhatsApp
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleNotify}
-                  className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-blue-500 hover:bg-blue-600 text-white font-bold text-lg shadow-lg transition mt-4"
-                >
-                  <FaWhatsapp className="w-6 h-6" /> Remind/Notify about this Order
-                </button>
-              ))}
+            </>
+          )}
 
-              <div className="text-xs text-blue-500 mt-4">
-                *For automatic sending with images, you need to use WhatsApp Business API or third-party services. 
-                Currently, images need to be manually attached in WhatsApp after the text is sent.
-                <br />
-                <strong>Tip:</strong> For group IDs, use the format: ESie4aulBDyId1KpkpiH10 (found in group info)
-              </div>
-            </div>
-          </>
-        )}
-        {/* Confirmation Modal */}
-        {confirmModal.open && (
-          <div className="fixed inset-0 flex items-center justify-center z-50">
-            <div className="absolute inset-0 backdrop-blur-sm" onClick={handleCancelDelete}></div>
-            <div className="relative bg-white rounded-2xl p-8 shadow-2xl max-w-xs w-full mx-4 animate-fadeIn flex flex-col items-center">
-              <div className="mb-4">
-                {confirmModal.type === 'item' ? (
-                  <FaTrash className="text-red-500 w-12 h-12" />
-                ) : (
-                  <FaTimes className="text-red-500 w-12 h-12" />
-                )}
-              </div>
-              <h3 className="text-lg font-bold text-blue-800 mb-2">
-                {confirmModal.type === 'item' ? 'Delete Item' : 'Delete Order'}
-              </h3>
-              <p className="mb-6 text-blue-700 text-center">
-                {confirmModal.type === 'item'
-                  ? 'Are you sure you want to delete this item?'
-                  : 'Are you sure you want to delete this order?'}
-              </p>
-              <div className="flex gap-4 w-full">
+          {/* No Orders Message */}
+          {!showTable && filteredOrders.length === 0 && (
+            <div className="text-center py-16">
+              <div className="bg-white rounded-3xl shadow-2xl border border-yellow-100 p-12 max-w-md mx-auto">
+                <div className="text-6xl mb-6">📋</div>
+                <h3 className="text-2xl font-bold text-gray-800 mb-4">No Orders Found</h3>
+                <p className="text-gray-600 mb-8">Start by creating your first order to manage customer requests</p>
                 <button
-                  onClick={handleCancelDelete}
-                  className="flex-1 px-4 py-2 rounded-xl bg-blue-100 hover:bg-blue-200 text-blue-700 font-semibold transition"
+                  onClick={addTab}
+                  className="px-8 py-4 bg-gradient-to-r from-amber-500 to-yellow-500 text-white rounded-2xl hover:from-amber-600 hover:to-yellow-600 transition-all duration-200 font-bold text-lg shadow-2xl transform hover:scale-105"
                 >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleConfirmDelete}
-                  className="flex-1 px-4 py-2 rounded-xl bg-red-500 hover:bg-red-600 text-white font-semibold transition flex items-center justify-center gap-2"
-                >
-                  {confirmModal.type === 'item' ? <FaTrash /> : <FaTimes />} Delete
+                  ➕ Create New Order
                 </button>
               </div>
             </div>
-          </div>
-        )}
-        <style>{`
-          .animate-fadeIn { animation: fadeIn 0.3s ease; }
-          @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        `}</style>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
- 
+
 export default Ordermanage;

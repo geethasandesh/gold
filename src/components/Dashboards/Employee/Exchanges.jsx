@@ -224,6 +224,7 @@ function Exchanges() {
                 min="0"
                       className="w-full pl-14 pr-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-yellow-100 focus:border-yellow-500 text-lg transition-all duration-200 bg-gray-50 focus:bg-white" 
                       placeholder="Enter weight" 
+                      style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
               />
             </div>
                 </div>
@@ -251,6 +252,7 @@ function Exchanges() {
                 step="0.01"
                       className="w-full pl-14 pr-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-yellow-100 focus:border-yellow-500 text-lg transition-all duration-200 bg-gray-50 focus:bg-white" 
                       placeholder="Enter touch %" 
+                      style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
               />
             </div>
                 </div>
@@ -273,6 +275,7 @@ function Exchanges() {
                 step="0.01"
                       className="w-full pl-14 pr-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-yellow-100 focus:border-yellow-500 text-lg transition-all duration-200 bg-gray-50 focus:bg-white" 
                 placeholder="Enter less value"
+                style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
               />
             </div>
                 </div>
@@ -300,6 +303,7 @@ function Exchanges() {
                       step="0.01"
                       className="w-full pl-14 pr-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-yellow-100 focus:border-yellow-500 text-lg transition-all duration-200 bg-gray-50 focus:bg-white" 
                       placeholder="Enter exchange rate (e.g., 0.25)"
+                      style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
                     />
                   </div>
                   <p className="text-sm text-gray-600 mt-1">
@@ -395,6 +399,19 @@ function Exchanges() {
           />
         )}
       </div>
+      
+      {/* Remove number input spinners */}
+      <style>{`
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        
+        input[type="number"] {
+          -moz-appearance: textfield;
+        }
+      `}</style>
     </>
   );
 }

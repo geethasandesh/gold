@@ -226,6 +226,7 @@ function Emptokens() {
                         type="number" 
                         min="0" 
                         placeholder="Enter amount in rupees" 
+                        style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
                       />
                     </div>
                   </div>
@@ -348,6 +349,17 @@ function Emptokens() {
         }
         .animate-fade-in {
           animation: fade-in 0.25s ease;
+        }
+        
+        /* Remove number input spinners */
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        
+        input[type="number"] {
+          -moz-appearance: textfield;
         }
       `}</style>
     </>

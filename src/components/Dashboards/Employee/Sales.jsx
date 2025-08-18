@@ -190,6 +190,7 @@ function Sales() {
                       min="0" 
                       className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-100 focus:border-green-500 text-base transition-all duration-200 bg-gray-50 focus:bg-white" 
                       placeholder="Enter weight" 
+                      style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
                     />
                   </div>
                 </div>
@@ -213,6 +214,7 @@ function Sales() {
                       min="0" 
                       className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-green-100 focus:border-green-500 text-base transition-all duration-200 bg-gray-50 focus:bg-white" 
                       placeholder="Enter rate" 
+                      style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
                     />
                   </div>
                 </div>
@@ -335,6 +337,19 @@ function Sales() {
           />
         )}
       </div>
+      
+      {/* Remove number input spinners */}
+      <style>{`
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        
+        input[type="number"] {
+          -moz-appearance: textfield;
+        }
+      `}</style>
     </>
   );
 }
