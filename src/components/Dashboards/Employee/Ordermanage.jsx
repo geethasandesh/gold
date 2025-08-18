@@ -409,8 +409,8 @@ function Ordermanage() {
     <>
       <Employeeheader />
       <div className="min-h-screen bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50">
-        {/* Main Content */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Main Content Container - Set to 75% width */}
+        <div className="mx-auto px-4 sm:px-6 lg:px-8 py-6" style={{width: '75%', maxWidth: '75vw'}}>
           {/* Header Section */}
           <div className="mb-8">
             <div className="bg-gradient-to-r from-yellow-100 to-amber-100 border border-yellow-300 rounded-2xl p-6 text-center shadow-lg mb-6">
@@ -868,8 +868,8 @@ function Ordermanage() {
                                 </button>
                               </td>
                             )}
-                        </tr>
-                      ))}
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>
@@ -935,7 +935,6 @@ function Ordermanage() {
                           const orderId = currentOrder.orderId;
                           const newOrders = orders.filter(order => order.orderId !== orderId);
                           setOrders(newOrders);
-                          
                           // Reset active tab if needed
                           if (newOrders.length === 0) {
                             // If no orders left, create a new empty order
@@ -1010,5 +1009,4 @@ function Ordermanage() {
     </>
   );
 }
-
 export default Ordermanage;
