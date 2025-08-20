@@ -9,7 +9,7 @@ This feature adds comprehensive daily transaction reporting capabilities to all 
 - **Date Selection**: Choose any date to view transactions
 - **Real-time Filtering**: Filter by employee, type, source, and payment mode
 - **Transaction Preview**: See first 5 transactions before downloading
-- **Export Options**: Download as Excel (.xlsx) or PDF (.pdf)
+- **Export Options**: Download as Excel (.xlsx) or PDF (.pdf).
 
 ### 📈 Report Types
 
