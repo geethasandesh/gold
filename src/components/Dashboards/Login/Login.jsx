@@ -68,7 +68,8 @@ function Login() {
       <div className="absolute backdrop-blur-sm" />
       <div className="relative z-10 w-full max-w-md rounded-2xl shadow-2xl p-8 flex flex-col items-center border border-yellow-400 bg-white/80 backdrop-blur-lg" style={{ boxShadow: '0 4px 32px 0 rgba(212,175,55,0.15), 0 1.5px 0 0 #FFD700 inset' }}>
         <div className="w-24 h-2 rounded-full mb-6 bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-500 shadow-lg" />
-        <h1 className="text-4xl font-semibold font-sans text-yellow-700 mb-2 tracking-tight">Sri Gayathri Testing and Assaying Center</h1>
+        <h1 className="text-4xl font-semibold font-sans text-yellow-700 mb-2 tracking-tight">Sri Gayathri Testing &</h1>
+        <h1 className="text-4xl font-semibold font-sans text-yellow-700 mb-2 tracking-tight"> Assaying Center</h1>
         <h2 className="text-xl font-semibold font-sans mb-4 text-yellow-600 w-full text-center">{showForgot ? 'Reset Password' : 'Log In'}</h2>
         {error && (
           <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded w-full text-center animate-pulse">
@@ -158,7 +159,7 @@ function Login() {
           >
             I forgot my password
           </button>
-          <span>&copy; Sri Gayathri Testing and Assaying Center 2025</span>
+          <span>&copy; Sri Gayathri Testing & Assaying Center 2025</span>
         </div>
       </div>
       <style>{`

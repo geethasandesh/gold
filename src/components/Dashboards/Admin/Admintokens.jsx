@@ -233,7 +233,7 @@ function Admintokens() {
                   </div>
                   <div className="flex justify-center">
                     <div id="token-preview" className="border-2 border-black p-8 w-[380px] bg-white relative rounded-2xl shadow-2xl transform rotate-1 hover:rotate-0 transition-transform duration-300" style={{fontFamily: 'monospace'}}>
-                <div className="text-center font-bold text-lg mb-2 text-yellow-800">SRI GAYATRI ASSAYING CENTRE</div>
+                <div className="text-center font-bold text-lg mb-2 text-yellow-800">SRI GAYATRI TESTING & ASSAYING CENTRE</div>
                 <div className="mt-2 text-yellow-700 font-semibold">DETAILS:</div>
                 <div className="flex justify-between mb-2 text-base">
                   <span className="font-semibold">TOKEN NO : {preview.tokenNo}</span>

@@ -81,7 +81,7 @@ function Employeeheader() {
             style={{ textDecoration: 'none' }}
           >
             <GiJewelCrown className="h-6 w-6 text-yellow-300 mr-2 drop-shadow-lg" />
-            <span className="text-lg font-bold tracking-tight text-white drop-shadow-lg">Sri Gayathri Testing and Assaying Center - Employee Portal</span>
+            <span className="text-lg font-bold tracking-tight text-white drop-shadow-lg">Sri Gayathri Testing & Assaying Center - Employee Portal</span>
           </Link>
         </div>
  

@@ -287,7 +287,7 @@ function Emptokens() {
                   <div className="flex justify-center">
                     <div id="token-preview" className="p-0 w-[280px] bg-white relative shadow-2xl transform rotate-1 hover:rotate-0 transition-transform duration-300" style={{fontFamily: 'monospace'}}>
                       <div className="p-4">
-                        <div className="text-center font-bold text-lg mb-1 text-yellow-800">Sri Gayathri Testing and Assaying Center</div>
+                        <div className="text-center font-bold text-lg mb-1 text-yellow-800">Sri Gayathri Testing & Assaying Center</div>
                         <div className="text-center font-bold text-sm mb-1 text-yellow-800">Dilshuknagar, Hyderabad</div>
                         <div className="text-center font-bold text-sm mb-1 text-yellow-800">TOKEN RECEIPT</div>
                         <div className="text-yellow-700 font-semibold mb-1">DETAILS:</div>

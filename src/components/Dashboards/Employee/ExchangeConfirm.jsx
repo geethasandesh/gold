@@ -247,7 +247,7 @@ function ExchangeConfirm() {
       ">
         <div style="padding: 15px;">
         <div style="font-size: 16px; font-weight: bold; margin-bottom: 8px;">
-          Sri Gayathri Testing and Assaying Center
+          Sri Gayathri Testing & Assaying Center
         </div>
         <div style="font-size: 12px; font-weight: bold; margin-bottom: 8px;">
           Dilshuknagar, Hyderabad

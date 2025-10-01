@@ -334,7 +334,7 @@ function AdminMainDashboard() {
               <GiJewelCrown className="w-14 h-14 text-yellow-600 drop-shadow-lg" />
             </div>
             <h1 className="text-5xl font-semibold font-sans bg-gradient-to-r from-yellow-700 via-amber-600 to-orange-600 bg-clip-text text-transparent drop-shadow-sm">
-              Sri Gayathri Testing and Assaying Center - Admin Portal
+              Sri Gayathri Testing & Assaying Center - Admin Portal
             </h1>
             <div className="animate-pulse">
               <GiJewelCrown className="w-14 h-14 text-yellow-600 drop-shadow-lg" />

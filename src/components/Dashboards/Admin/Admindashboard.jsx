@@ -142,7 +142,7 @@ function Admindashboard() {
       <div className={showAddEmployeeModal ? 'blur-md transition duration-300' : ''}>
         {/* Top left */}
         <div className="absolute top-4 left-4 md:top-6 md:left-6">
-          <h1 className="text-lg md:text-2xl font-semibold font-sans text-yellow-700">Sri Gayathri Testing and Assaying Center</h1>
+          <h1 className="text-lg md:text-2xl font-semibold font-sans text-yellow-700">Sri Gayathri Testing & Assaying Center</h1>
           <div className="h-1 w-12 md:w-21 bg-yellow-500 mt-1 rounded-full"></div>
         </div>
 
